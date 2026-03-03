@@ -35,33 +35,59 @@ def print_progress(msg: str):
 
 
 def process_single_track(mp3_path: Path, client: OpenAI,
-                         cache: CacheManager, renderer: Renderer,
-                         force: bool = False):
-    """단일 MP3 트랙을 처리 (음성인식 → 분석 → HTML)"""
+                         cache: CacheManager,
+                         force: bool = False) -> TrackAnalysis:
+    """단일 MP3 트랙을 처리 (음성인식 → 분석). TrackAnalysis 반환."""
     track_name = mp3_path.stem
 
+    # 캐시 확인
     if not force and cache.is_processed(track_name):
-        print_progress(f"  건너뜀 (캐시 있음): {track_name}")
-        return track_name, True
+        print_progress(f"  캐시 로드: {track_name}")
+        transcription = cache.get_transcription(track_name) or ""
+        analyses = cache.get_analysis(track_name) or []
+        # SentenceAnalysis 리스트로 복원
+        from models import SentenceAnalysis, WordBreakdown, GrammarPoint
+        sentences = []
+        for s in analyses:
+            words = [WordBreakdown(**w) if isinstance(w, dict) else w
+                     for w in s.get("words", [])]
+            grammar = [GrammarPoint(**g) if isinstance(g, dict) else g
+                       for g in s.get("grammar_points", [])]
+            sentences.append(SentenceAnalysis(
+                sentence_index=s["sentence_index"],
+                original=s["original"],
+                pinyin_full=s["pinyin_full"],
+                words=words,
+                grammar_points=grammar,
+                translation_ko=s["translation_ko"],
+                translation_literal_ko=s["translation_literal_ko"],
+                difficulty_note=s["difficulty_note"],
+            ))
+        return TrackAnalysis(
+            track_name=track_name,
+            source_path=str(mp3_path),
+            transcription=transcription,
+            sentences=sentences,
+            total_duration_hint="",
+            processing_timestamp="cached",
+        )
 
-    print_progress(f"▶ 처리 시작: {track_name}")
+    print_progress(f">> 처리 시작: {track_name}")
 
     # 1단계: 음성 인식
-    print_progress(f"  1/3 음성 인식 중...")
+    print_progress(f"  1/2 음성 인식 중...")
     transcriber = Transcriber(client, cache)
     transcription = transcriber.transcribe_file(mp3_path)
-    print_progress(f"  ✓ 인식 완료 ({len(transcription)}자)")
+    print_progress(f"  > 인식 완료 ({len(transcription)}자)")
 
     # 2단계: 문장 분석
-    print_progress(f"  2/3 문장 분석 중...")
+    print_progress(f"  2/2 문장 분석 중...")
     analyzer = Analyzer(client, cache)
     analyses = analyzer.analyze_track(track_name, transcription,
                                       progress_callback=print_progress)
-    print_progress(f"  ✓ 분석 완료 ({len(analyses)}문장)")
+    print_progress(f"  > 분석 완료 ({len(analyses)}문장)")
 
-    # 3단계: HTML 생성
-    print_progress(f"  3/3 HTML 생성 중...")
-    track_data = TrackAnalysis(
+    return TrackAnalysis(
         track_name=track_name,
         source_path=str(mp3_path),
         transcription=transcription,
@@ -69,10 +95,6 @@ def process_single_track(mp3_path: Path, client: OpenAI,
         total_duration_hint="",
         processing_timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
     )
-    output_path = renderer.render_track(track_data)
-    print_progress(f"  ✓ HTML 생성: {output_path}")
-
-    return track_name, True
 
 
 def collect_mp3_files(source_key: str = None) -> list:
@@ -109,13 +131,13 @@ def main():
     parser.add_argument("--all", action="store_true",
                         help="선택된 소스의 전체 트랙 처리")
     parser.add_argument("--source",
-                        choices=["listening", "vocabulary", "voca_56"],
+                        choices=["listening", "vocabulary"],
                         default="listening",
                         help="MP3 소스 선택 (기본: listening)")
     parser.add_argument("--force", action="store_true",
                         help="캐시 무시하고 재처리")
     parser.add_argument("--model", type=str, default=None,
-                        help="GPT 모델 지정 (기본: gpt-4o-mini)")
+                        help="GPT 모델 지정 (기본: config.py 설정값)")
 
     args = parser.parse_args()
 
@@ -162,40 +184,50 @@ def main():
     print()
 
     # 각 파일 처리
-    results = []
+    track_analyses = []
+    errors = []
     for i, mp3_path in enumerate(files, 1):
         print_progress(f"[{i}/{len(files)}] {mp3_path.name}")
         try:
-            track_name, success = process_single_track(
-                mp3_path, client, cache, renderer, force=args.force
+            track_data = process_single_track(
+                mp3_path, client, cache, force=args.force
             )
-            results.append({
-                "track_name": track_name,
-                "filename": f"{track_name}.html",
-                "success": success,
-            })
+            track_analyses.append(track_data)
         except Exception as e:
-            print_progress(f"  ✗ 오류: {e}")
-            results.append({
-                "track_name": mp3_path.stem,
-                "success": False,
-                "error": str(e),
-            })
+            print_progress(f"  X 오류: {e}")
+            errors.append(mp3_path.stem)
         print()
 
-    # 목록 페이지 생성
-    successful = [r for r in results if r.get("success")]
-    for r in successful:
-        cached_analysis = cache.get_analysis(r["track_name"])
-        r["sentence_count"] = len(cached_analysis) if cached_analysis else 0
-        r["source"] = args.source
+    # HTML 생성
+    if track_analyses:
+        # 통합 HTML 생성 (소스별 하나의 페이지)
+        combined_path = renderer.render_combined(track_analyses, args.source)
+        print_progress(f"> 통합 HTML 생성: {combined_path}")
 
-    renderer.render_index(successful)
+        # 개별 HTML도 함께 생성
+        for t in track_analyses:
+            renderer.render_track(t)
+
+        # 목록 페이지
+        index_data = []
+        for t in track_analyses:
+            index_data.append({
+                "track_name": t.track_name,
+                "filename": f"{t.track_name}.html",
+                "success": True,
+                "sentence_count": len(t.sentences),
+                "source": args.source,
+            })
+        renderer.render_index(index_data)
 
     # 요약
     print_progress(f"=== 완료 ===")
-    print_progress(f"성공: {len(successful)}/{len(files)}")
-    print_progress(f"결과: {OUTPUT_DIR / 'index.html'}")
+    print_progress(f"성공: {len(track_analyses)}/{len(files)}")
+    if errors:
+        print_progress(f"실패: {', '.join(errors)}")
+    if track_analyses:
+        print_progress(f"통합 페이지: {OUTPUT_DIR / f'{args.source}.html'}")
+        print_progress(f"목록 페이지: {OUTPUT_DIR / 'index.html'}")
 
 
 if __name__ == "__main__":

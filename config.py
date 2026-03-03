@@ -10,7 +10,12 @@ PROJECT_DIR = Path(__file__).parent
 MP3_SOURCES = {
     "listening": Path(r"c:/Users/rlgns/OneDrive/문서/HSK/신HSK_한권으로_합격하기5급_개정판/MP3"),
     "vocabulary": Path(r"c:/Users/rlgns/OneDrive/문서/HSK/신HSK_한권으로_합격하기5급_개정판/단어MP3"),
-    "voca_56": Path(r"c:/Users/rlgns/OneDrive/문서/HSK/HSK5~6급"),
+}
+
+# 소스별 한글 이름
+SOURCE_LABELS = {
+    "listening": "듣기",
+    "vocabulary": "단어",
 }
 
 # 출력 디렉토리
@@ -22,7 +27,7 @@ TEMPLATES_DIR = PROJECT_DIR / "templates"
 
 # API 설정
 WHISPER_MODEL = "whisper-1"
-GPT_MODEL = "gpt-4o-mini"  # gpt-5-mini, gpt-4.1-nano 등으로 변경 가능
+GPT_MODEL = "gpt-5-mini"  # gpt-5-mini, gpt-4.1-nano 등으로 변경 가능
 MAX_FILE_SIZE_MB = 25       # Whisper API 파일 크기 제한
 CHUNK_SIZE_MB = 20          # 분할 시 청크 크기
 
