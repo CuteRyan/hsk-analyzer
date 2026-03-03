@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ track.track_name }} - HSK 분석{% endblock %}
+{% block content %}
+<div class="header">
+    <h1>{{ track.track_name }}</h1>
+    <div class="subtitle">
+        문장 {{ track.sentences|length }}개 |
+        분석일: {{ track.processing_timestamp }}
+    </div>
+    <a href="index.html" class="nav-link">&larr; 목록으로 돌아가기</a>
+</div>
+
+<!-- 오디오 플레이어 -->
+<div class="audio-player">
+    <div class="audio-label">음원 재생</div>
+    <audio id="main-audio" controls preload="metadata">
+        <source src="{{ audio_path }}" type="audio/mpeg">
+        오디오를 재생할 수 없습니다.
+    </audio>
+    <div class="audio-controls">
+        <button onclick="changeSpeed(0.5)" title="0.5배속">0.5x</button>
+        <button onclick="changeSpeed(0.75)" title="0.75배속">0.75x</button>
+        <button onclick="changeSpeed(1.0)" class="active" title="1배속">1x</button>
+        <button onclick="changeSpeed(1.25)" title="1.25배속">1.25x</button>
+        <button onclick="rewind(5)" title="5초 되감기">-5s</button>
+        <button onclick="forward(5)" title="5초 앞으로">+5s</button>
+    </div>
+</div>
+
+<!-- 전체 원문 (접이식) -->
+<details class="full-transcription">
+    <summary>전체 원문 보기</summary>
+    <p style="margin-top: 12px;">{{ track.transcription }}</p>
+</details>
+
+{% for s in track.sentences %}
+<div class="sentence-card" id="s{{ s.sentence_index }}">
+    <div class="sentence-number">{{ s.sentence_index + 1 }}</div>
+
+    <!-- 한자 + 루비 병음 -->
+    <div class="chinese-text">
+        {%- for w in s.words -%}
+        <ruby>{{ w.word }}<rt>{{ w.pinyin }}</rt></ruby>
+        {%- endfor -%}
+    </div>
+
+    <!-- 전체 병음 -->
+    <div class="pinyin-line">{{ s.pinyin_full }}</div>
+
+    <!-- 한국어 번역 -->
+    <div class="translation">
+        <div class="translation-label">한국어 번역</div>
+        {{ s.translation_ko }}
+    </div>
+
+    <div class="translation-literal">
+        <div class="translation-label">직역 (어순 이해용)</div>
+        {{ s.translation_literal_ko }}
+    </div>
+
+    <!-- 단어 분석 -->
+    <div class="section-label">단어 분석</div>
+    <table class="word-table">
+        <thead>
+            <tr>
+                <th>단어</th>
+                <th>병음</th>
+                <th>품사</th>
+                <th>뜻</th>
+                <th>상세</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for w in s.words %}
+            <tr>
+                <td style="font-size:1.2em; font-weight:600;">{{ w.word }}</td>
+                <td style="color:var(--accent);">{{ w.pinyin }}</td>
+                <td><span class="pos-badge pos-{{ w.part_of_speech }}">{{ w.part_of_speech }}</span></td>
+                <td>{{ w.meaning_ko }}</td>
+                <td style="font-size:0.9em; color:var(--text-secondary);">{{ w.meaning_detail }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 문법 포인트 -->
+    {% if s.grammar_points %}
+    <div class="section-label">문법 포인트</div>
+    <div class="grammar-section">
+        {% for g in s.grammar_points %}
+        <details>
+            <summary>{{ g.pattern }}</summary>
+            <div class="grammar-content">
+                <p>{{ g.explanation_ko }}</p>
+                <div class="grammar-example">예문: {{ g.example }}</div>
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 학습 팁 -->
+    {% if s.difficulty_note %}
+    <div class="difficulty-note">{{ s.difficulty_note }}</div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div style="text-align:center; padding: 20px;">
+    <a href="index.html" class="nav-link">&larr; 목록으로 돌아가기</a>
+</div>
+{% endblock %}

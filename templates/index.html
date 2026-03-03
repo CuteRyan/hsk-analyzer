@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}HSK 학습 분석기 - 목록{% endblock %}
+{% block content %}
+<div class="header">
+    <h1>HSK 듣기 분석 결과</h1>
+    <div class="subtitle">총 {{ tracks|length }}개 트랙 분석 완료</div>
+</div>
+
+{% if tracks %}
+<ul class="track-list">
+{% for t in tracks %}
+    <li class="track-item">
+        <a href="{{ t.filename }}">{{ t.track_name }}</a>
+        <span class="sentence-count">{{ t.sentence_count }}문장</span>
+        {% if t.source %}
+        <span class="sentence-count">[{{ t.source }}]</span>
+        {% endif %}
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+    <p>아직 분석된 트랙이 없습니다.</p>
+    <p style="margin-top: 10px; font-size: 0.9em;">
+        <code>python run.py --track TRACK001.mp3</code> 으로 시작해보세요!
+    </p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,6 @@
+openai>=2.0.0
+python-dotenv>=1.0.0
+Jinja2>=3.1.0
+pypinyin>=0.50.0
+jieba>=0.42.1
+pydub>=0.25.1
