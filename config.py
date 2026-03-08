@@ -26,10 +26,7 @@ ANALYSIS_CACHE = CACHE_DIR / "analyses"
 TEMPLATES_DIR = PROJECT_DIR / "templates"
 
 # API 설정
-WHISPER_MODEL = "whisper-1"
 GPT_MODEL = "gpt-5-mini"  # gpt-5-mini, gpt-4.1-nano 등으로 변경 가능
-MAX_FILE_SIZE_MB = 25       # Whisper API 파일 크기 제한
-CHUNK_SIZE_MB = 20          # 분할 시 청크 크기
 
 # 분석 배치 크기: GPT 한 번 호출에 보낼 문장 수
 ANALYSIS_BATCH_SIZE = 5

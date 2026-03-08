@@ -1,0 +1,71 @@
+                <div class="sentence-card{% if s.role == '질문' %} role-question{% endif %}">
+                    <div class="sentence-number">{{ s.sentence_index + 1 }}</div>
+                    {% if s.role %}
+                    <span class="role-badge role-{{ s.role }}">{{ s.role }}</span>
+                    {% endif %}
+
+                    <!-- 루비 병음 -->
+                    <div class="chinese-text">
+                        {%- for w in s.words -%}
+                        <ruby>{{ w.word }}<rt>{{ w.pinyin }}</rt></ruby>
+                        {%- endfor -%}
+                    </div>
+
+                    <!-- 전체 병음 -->
+                    <div class="pinyin-line">{{ s.pinyin_full }}</div>
+
+                    <!-- 번역 -->
+                    <div class="translation">
+                        <div class="translation-label">한국어 번역</div>
+                        {{ s.translation_ko }}
+                    </div>
+                    <div class="translation-literal">
+                        <div class="translation-label">직역 (어순 이해용)</div>
+                        {{ s.translation_literal_ko }}
+                    </div>
+
+                    <!-- 단어 분석 -->
+                    <div class="section-label">단어 분석</div>
+                    <table class="word-table">
+                        <thead>
+                            <tr>
+                                <th>단어</th>
+                                <th>병음</th>
+                                <th>품사</th>
+                                <th>뜻</th>
+                                <th>상세</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for w in s.words %}
+                            <tr>
+                                <td style="font-size:1.15em; font-weight:600;">{{ w.word }}</td>
+                                <td style="color:var(--accent);">{{ w.pinyin }}</td>
+                                <td><span class="pos-badge pos-{{ w.part_of_speech }}">{{ w.part_of_speech }}</span></td>
+                                <td>{{ w.meaning_ko }}</td>
+                                <td style="font-size:0.88em; color:var(--text-secondary);">{{ w.meaning_detail }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- 문법 -->
+                    {% if s.grammar_points %}
+                    <div class="section-label">문법 포인트</div>
+                    <div class="grammar-section">
+                        {% for g in s.grammar_points %}
+                        <details>
+                            <summary>{{ g.pattern }}</summary>
+                            <div class="grammar-content">
+                                <p>{{ g.explanation_ko }}</p>
+                                <div class="grammar-example">예문: {{ g.example }}</div>
+                            </div>
+                        </details>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if s.difficulty_note %}
+                    <div class="difficulty-note">{{ s.difficulty_note }}</div>
+                    {% endif %}
+                </div>

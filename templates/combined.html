@@ -111,6 +111,26 @@
             font-size: 0.75em;
             color: var(--text-secondary);
         }
+        .sidebar-sublist {
+            list-style: none;
+            display: none;
+        }
+        .sidebar-item.expanded .sidebar-sublist {
+            display: block;
+        }
+        .sidebar-subitem a {
+            display: block;
+            padding: 5px 16px 5px 32px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.82em;
+            transition: all 0.15s;
+        }
+        .sidebar-subitem a:hover,
+        .sidebar-subitem.active a {
+            color: var(--accent);
+            font-weight: 600;
+        }
 
         /* ===== 메인 콘텐츠 ===== */
         .main-content {
@@ -235,6 +255,29 @@
             text-align: center; line-height: 30px;
             font-weight: bold; font-size: 0.85em;
             margin-bottom: 10px;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.78em;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .role-화자A { background: #e3f2fd; color: #1565c0; }
+        .role-화자B { background: #fce4ec; color: #c62828; }
+        .role-화자C { background: #f3e5f5; color: #6a1b9a; }
+        .role-나레이터 { background: #e8f5e9; color: #2e7d32; }
+        .role-질문 { background: #fff8e1; color: #f57f17; }
+        [data-theme="dark"] .role-화자A { background: #0d47a1; color: #bbdefb; }
+        [data-theme="dark"] .role-화자B { background: #b71c1c; color: #ffcdd2; }
+        [data-theme="dark"] .role-화자C { background: #4a148c; color: #e1bee7; }
+        [data-theme="dark"] .role-나레이터 { background: #1b5e20; color: #c8e6c9; }
+        [data-theme="dark"] .role-질문 { background: #e65100; color: #ffe0b2; }
+        .sentence-card.role-question {
+            border-left: 4px solid #f57f17;
+            background: var(--accent-light);
         }
         .chinese-text {
             font-size: 1.5em;
@@ -368,6 +411,91 @@
             border-color: #555;
         }
 
+        /* ===== 문제별 구분 (긴 트랙) ===== */
+        .question-group {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px dashed var(--border);
+        }
+        .question-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .question-header {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.95em;
+            margin-bottom: 14px;
+        }
+        /* ===== 문제 가로 버튼 바 ===== */
+        .question-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 0;
+        }
+        .question-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 2px solid var(--accent);
+            border-radius: 10px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95em;
+            transition: all 0.2s;
+        }
+        .question-btn:hover,
+        .question-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+        /* ===== 이전/다음 페이저 ===== */
+        .question-pager {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 0 10px;
+            margin-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        .pager-btn {
+            padding: 10px 24px;
+            background: var(--bg-card);
+            border: 2px solid var(--accent);
+            border-radius: 10px;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pager-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+        .pager-info {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        /* ===== 트랙 간 이전/다음 ===== */
+        .track-pager {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            padding: 24px 0 10px;
+            margin-top: 30px;
+            border-top: 2px solid var(--border);
+        }
+
         /* ===== 전체 원문 ===== */
         .full-transcription {
             background: var(--bg-secondary);
@@ -488,10 +616,27 @@
         <ul class="sidebar-list" id="sidebarList">
             {% for t in tracks %}
             <li class="sidebar-item" data-name="{{ t.track_name }}">
-                <a href="#track-{{ t.track_name }}" onclick="closeSidebarMobile()">
+                <a href="#track-{{ t.track_name }}" onclick="event.preventDefault(); navigateToTrack('{{ t.track_name }}')">
                     {{ t.track_name }}
-                    <div class="track-info">{{ t.sentences|length }}문장</div>
+                    <div class="track-info">
+                        {% if t.questions and t.questions|length > 1 %}
+                        {{ t.questions|length }}문제
+                        {% else %}
+                        {{ t.sentences|length }}문장
+                        {% endif %}
+                    </div>
                 </a>
+                {% if t.questions and t.questions|length > 1 %}
+                <ul class="sidebar-sublist">
+                    {% for q in t.questions %}
+                    <li class="sidebar-subitem" data-name="{{ t.track_name }}-Q{{ '%02d'|format(q.question_num) }}">
+                        <a href="#{{ t.track_name }}-Q{{ '%02d'|format(q.question_num) }}" onclick="event.preventDefault(); navigateToQuestion('{{ t.track_name }}', {{ q.question_num }})">
+                            문제 {{ q.question_num }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
             </li>
             {% endfor %}
         </ul>
@@ -507,12 +652,12 @@
             </div>
         </div>
 
+        <div class="track-placeholder" id="trackPlaceholder" style="text-align:center; padding:60px 20px; color:var(--text-secondary);">
+            <p style="font-size:1.2em;">사이드바에서 트랙을 선택하세요</p>
+        </div>
+
         {% for t in tracks %}
-        <details class="track-section" id="track-{{ t.track_name }}">
-            <summary>
-                {{ t.track_name }}
-                <span class="track-meta">{{ t.sentences|length }}문장</span>
-            </summary>
+        <div class="track-section" id="track-{{ t.track_name }}" style="display:none;">
             <div class="track-body">
                 <!-- 오디오 플레이어 -->
                 {% if t.audio_path %}
@@ -532,84 +677,85 @@
                 {% endif %}
 
                 <!-- 전체 원문 -->
+                {% if t.transcription %}
                 <details class="full-transcription">
                     <summary>전체 원문 보기</summary>
                     <p style="margin-top: 10px;">{{ t.transcription }}</p>
                 </details>
+                {% endif %}
 
-                <!-- 문장별 분석 -->
-                {% for s in t.sentences %}
-                <div class="sentence-card">
-                    <div class="sentence-number">{{ s.sentence_index + 1 }}</div>
-
-                    <!-- 루비 병음 -->
-                    <div class="chinese-text">
-                        {%- for w in s.words -%}
-                        <ruby>{{ w.word }}<rt>{{ w.pinyin }}</rt></ruby>
-                        {%- endfor -%}
-                    </div>
-
-                    <!-- 전체 병음 -->
-                    <div class="pinyin-line">{{ s.pinyin_full }}</div>
-
-                    <!-- 번역 -->
-                    <div class="translation">
-                        <div class="translation-label">한국어 번역</div>
-                        {{ s.translation_ko }}
-                    </div>
-                    <div class="translation-literal">
-                        <div class="translation-label">직역 (어순 이해용)</div>
-                        {{ s.translation_literal_ko }}
-                    </div>
-
-                    <!-- 단어 분석 -->
-                    <div class="section-label">단어 분석</div>
-                    <table class="word-table">
-                        <thead>
-                            <tr>
-                                <th>단어</th>
-                                <th>병음</th>
-                                <th>품사</th>
-                                <th>뜻</th>
-                                <th>상세</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for w in s.words %}
-                            <tr>
-                                <td style="font-size:1.15em; font-weight:600;">{{ w.word }}</td>
-                                <td style="color:var(--accent);">{{ w.pinyin }}</td>
-                                <td><span class="pos-badge pos-{{ w.part_of_speech }}">{{ w.part_of_speech }}</span></td>
-                                <td>{{ w.meaning_ko }}</td>
-                                <td style="font-size:0.88em; color:var(--text-secondary);">{{ w.meaning_detail }}</td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-
-                    <!-- 문법 -->
-                    {% if s.grammar_points %}
-                    <div class="section-label">문법 포인트</div>
-                    <div class="grammar-section">
-                        {% for g in s.grammar_points %}
-                        <details>
-                            <summary>{{ g.pattern }}</summary>
-                            <div class="grammar-content">
-                                <p>{{ g.explanation_ko }}</p>
-                                <div class="grammar-example">예문: {{ g.example }}</div>
-                            </div>
-                        </details>
-                        {% endfor %}
+                {% if t.questions and t.questions|length > 1 %}
+                <!-- 복수 문제 트랙: 탭 방식 -->
+                <div class="question-nav" data-track="{{ t.track_name }}">
+                    <button class="question-btn" onclick="switchQuestion('{{ t.track_name }}', 'all')" id="{{ t.track_name }}-Qall">
+                        전체
+                    </button>
+                    {% for q in t.questions %}
+                    <button class="question-btn{% if loop.first %} active{% endif %}" onclick="switchQuestion('{{ t.track_name }}', {{ q.question_num }})" id="{{ t.track_name }}-Q{{ '%02d'|format(q.question_num) }}">
+                        문제 {{ q.question_num }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% for q in t.questions %}
+                <div class="question-panel" data-track="{{ t.track_name }}" data-qnum="{{ q.question_num }}" style="{% if not loop.first %}display:none;{% endif %}">
+                    {% if q.audio_path %}
+                    <div class="track-audio" style="margin-bottom:16px;">
+                        <audio controls preload="none">
+                            <source src="{{ q.audio_path }}" type="audio/mpeg">
+                        </audio>
+                        <div class="audio-controls">
+                            <button onclick="setSpeed(this, 0.5)">0.5x</button>
+                            <button onclick="setSpeed(this, 0.75)">0.75x</button>
+                            <button onclick="setSpeed(this, 1.0)" class="active">1x</button>
+                            <button onclick="setSpeed(this, 1.25)">1.25x</button>
+                            <button onclick="seekAudio(this, -5)">-5s</button>
+                            <button onclick="seekAudio(this, 5)">+5s</button>
+                        </div>
                     </div>
                     {% endif %}
-
-                    {% if s.difficulty_note %}
-                    <div class="difficulty-note">{{ s.difficulty_note }}</div>
-                    {% endif %}
+                    {% for s in q.sentences %}
+                    {% include "sentence_card.html" %}
+                    {% endfor %}
+                    <div class="question-pager">
+                        {% if not loop.first %}
+                        <button class="pager-btn" onclick="switchQuestion('{{ t.track_name }}', {{ q.question_num - 1 }})">← 이전 문제</button>
+                        {% endif %}
+                        <span class="pager-info">{{ q.question_num }} / {{ t.questions|length }}</span>
+                        {% if not loop.last %}
+                        <button class="pager-btn" onclick="switchQuestion('{{ t.track_name }}', {{ q.question_num + 1 }})">다음 문제 →</button>
+                        {% endif %}
+                    </div>
                 </div>
                 {% endfor %}
+                {% else %}
+                <!-- 단일 문제 트랙: 바로 표시 -->
+                {% if t.questions %}
+                {% for q in t.questions %}
+                <div class="question-group" id="{{ t.track_name }}-Q{{ '%02d'|format(q.question_num) }}">
+                    {% for s in q.sentences %}
+                    {% include "sentence_card.html" %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                {% else %}
+                {% for s in t.sentences %}
+                {% include "sentence_card.html" %}
+                {% endfor %}
+                {% endif %}
+                {% endif %}
+
+                <!-- 트랙 간 이전/다음 -->
+                <div class="track-pager">
+                    {% if not loop.first %}
+                    <button class="pager-btn" onclick="navigateToTrack('{{ tracks[loop.index0 - 1].track_name }}')">← {{ tracks[loop.index0 - 1].track_name }}</button>
+                    {% endif %}
+                    <span class="pager-info">{{ loop.index }} / {{ tracks|length }}</span>
+                    {% if not loop.last %}
+                    <button class="pager-btn" onclick="navigateToTrack('{{ tracks[loop.index0 + 1].track_name }}')">{{ tracks[loop.index0 + 1].track_name }} →</button>
+                    {% endif %}
+                </div>
             </div>
-        </details>
+        </div>
         {% endfor %}
     </div>
 
@@ -633,6 +779,105 @@
         function closeSidebarMobile() {
             if (window.innerWidth <= 768)
                 document.getElementById('sidebar').classList.remove('open');
+        }
+
+        // 재생 중인 모든 오디오 정지
+        function stopAllAudio() {
+            document.querySelectorAll('audio').forEach(function(a) {
+                a.pause();
+                a.currentTime = 0;
+            });
+        }
+
+        // 트랙 네비게이션 — 선택된 트랙만 표시
+        function navigateToTrack(trackName) {
+            stopAllAudio();
+            // 모든 트랙 숨기기
+            document.querySelectorAll('.track-section').forEach(function(s) {
+                s.style.display = 'none';
+            });
+            // placeholder 숨기기
+            var ph = document.getElementById('trackPlaceholder');
+            if (ph) ph.style.display = 'none';
+            // 대상 트랙만 표시
+            var target = document.getElementById('track-' + trackName);
+            if (target) {
+                target.style.display = '';
+                target.scrollIntoView({behavior: 'smooth', block: 'start'});
+            }
+            // 사이드바 active 표시 업데이트
+            document.querySelectorAll('.sidebar-item').forEach(function(item) {
+                item.classList.remove('active');
+                item.classList.remove('expanded');
+            });
+            var activeItem = document.querySelector('.sidebar-item[data-name="' + trackName + '"]');
+            if (activeItem) {
+                activeItem.classList.add('active');
+                activeItem.classList.add('expanded');
+            }
+            // 모바일에서 사이드바 닫기
+            closeSidebarMobile();
+            // URL 해시 업데이트
+            history.replaceState(null, '', '#track-' + trackName);
+        }
+
+        // 문제별 네비게이션 (사이드바에서 클릭)
+        function navigateToQuestion(trackName, qNum) {
+            // 트랙 열기
+            var trackEl = document.getElementById('track-' + trackName);
+            if (trackEl) trackEl.setAttribute('open', '');
+            // 탭 전환
+            switchQuestion(trackName, qNum);
+            // 트랙 위치로 스크롤
+            if (trackEl) {
+                setTimeout(function() {
+                    trackEl.scrollIntoView({behavior: 'smooth', block: 'start'});
+                }, 100);
+            }
+            // 사이드바 active 표시
+            document.querySelectorAll('.sidebar-item').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            var activeItem = document.querySelector('.sidebar-item[data-name="' + trackName + '"]');
+            if (activeItem) {
+                activeItem.classList.add('active');
+                activeItem.classList.add('expanded');
+            }
+            closeSidebarMobile();
+        }
+
+        // 문제 탭 전환
+        function switchQuestion(trackName, qNum) {
+            stopAllAudio();
+            var isAll = (qNum === 'all');
+            // 패널 전환
+            document.querySelectorAll('.question-panel[data-track="' + trackName + '"]').forEach(function(p) {
+                p.style.display = isAll ? '' : (p.getAttribute('data-qnum') == qNum ? '' : 'none');
+            });
+            // 전체 모드일 때 페이저 숨기기
+            document.querySelectorAll('.question-panel[data-track="' + trackName + '"] .question-pager').forEach(function(pg) {
+                pg.style.display = isAll ? 'none' : '';
+            });
+            // 버튼 active 전환
+            var nav = document.querySelector('.question-nav[data-track="' + trackName + '"]');
+            if (nav) {
+                nav.querySelectorAll('.question-btn').forEach(function(b) { b.classList.remove('active'); });
+                var qId = isAll ? trackName + '-Qall' : trackName + '-Q' + String(qNum).padStart(2, '0');
+                var activeBtn = document.getElementById(qId);
+                if (activeBtn) activeBtn.classList.add('active');
+            }
+            // 사이드바 하위 항목 active
+            document.querySelectorAll('.sidebar-subitem').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            if (!isAll) {
+                var subId = trackName + '-Q' + String(qNum).padStart(2, '0');
+                var activeSub = document.querySelector('.sidebar-subitem[data-name="' + subId + '"]');
+                if (activeSub) activeSub.classList.add('active');
+            }
+            // 스크롤 위로
+            var trackEl = document.getElementById('track-' + trackName);
+            if (trackEl) trackEl.scrollIntoView({behavior: 'smooth', block: 'start'});
         }
 
         // 사이드바 검색
@@ -682,15 +927,12 @@
             });
         });
 
-        // URL 해시로 특정 트랙 자동 펼침
+        // URL 해시로 특정 트랙 자동 열기
         (function() {
             var hash = window.location.hash;
-            if (hash) {
-                var el = document.querySelector(hash);
-                if (el && el.tagName === 'DETAILS') {
-                    el.open = true;
-                    setTimeout(function() { el.scrollIntoView({behavior: 'smooth'}); }, 100);
-                }
+            if (hash && hash.startsWith('#track-')) {
+                var trackName = hash.replace('#track-', '');
+                setTimeout(function() { navigateToTrack(trackName); }, 100);
             }
         })();
     </script>

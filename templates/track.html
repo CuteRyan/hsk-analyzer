@@ -4,10 +4,17 @@
 <div class="header">
     <h1>{{ track.track_name }}</h1>
     <div class="subtitle">
+        {% if parent_track %}
+        {{ parent_track }} 문제 {{ question_num }} |
+        {% endif %}
         문장 {{ track.sentences|length }}개 |
         분석일: {{ track.processing_timestamp }}
     </div>
+    {% if parent_track %}
+    <a href="listening.html#track-{{ parent_track }}" class="nav-link">&larr; {{ parent_track }}로 돌아가기</a>
+    {% else %}
     <a href="index.html" class="nav-link">&larr; 목록으로 돌아가기</a>
+    {% endif %}
 </div>
 
 <!-- 오디오 플레이어 -->

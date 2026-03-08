@@ -34,6 +34,7 @@ class SentenceAnalysis:
     translation_ko: str                  # 한국어 번역
     translation_literal_ko: str          # 직역
     difficulty_note: str                 # 학습 팁
+    role: str = ""                       # 화자 역할 (화자A/화자B/나레이터/질문)
 
 
 @dataclass
@@ -64,6 +65,7 @@ class TrackAnalysis:
                 translation_ko=s["translation_ko"],
                 translation_literal_ko=s["translation_literal_ko"],
                 difficulty_note=s["difficulty_note"],
+                role=s.get("role", ""),
             ))
         return cls(
             track_name=data["track_name"],
