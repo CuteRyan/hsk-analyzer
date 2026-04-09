@@ -1,0 +1,66 @@
+[project]
+name = "hsk-analyzer"
+version = "0.1.0"
+description = "HSK 5급 듣기 분석기 - MP3에서 문장별 상세 분석 HTML 생성"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "Jinja2>=3.1.0",
+    "pypinyin>=0.50.0",
+    "jieba>=0.42.1",
+    "pydub>=0.25.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pre-commit>=3.7.0",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (formatter handles)
+    "E402",   # module level import not at top (load_dotenv 의도적 배치)
+    "B905",   # zip() without strict= (Python 3.10 호환성)
+    "SIM102", # nested if → single if (가독성 유지)
+    "SIM108", # ternary operator (가독성 유지)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short"
+markers = [
+    "integration: tests requiring external services (GPT, FunASR)",
+    "slow: tests taking >10 seconds",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+ignore_missing_imports = true

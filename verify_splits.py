@@ -12,13 +12,15 @@ import io
 import json
 import re
 import sys
-import os
-from pathlib import Path
 from difflib import SequenceMatcher
 
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
+    sys.stderr = io.TextIOWrapper(
+        sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
 
 from config import OUTPUT_DIR, TRANSCRIPTION_CACHE
 
@@ -27,7 +29,7 @@ SPLIT_AUDIO_DIR = OUTPUT_DIR / "audio_splits"
 
 def strip_punc(text):
     """구두점/공백 제거"""
-    return re.sub(r'[，。！？、；：""''（）《》【】\s,.!?;:\s]', '', text)
+    return re.sub(r'[，。！？、；：""' r"（）《》【】\s,.!?;:\s]", "", text)
 
 
 def get_question_text(track_name, q_num):
@@ -53,7 +55,7 @@ def verify_track(track_name, model):
     results = []
     for mp3_path in split_files:
         stem = mp3_path.stem
-        match = re.match(r'(TRACK\d+)-(\d+)$', stem)
+        match = re.match(r"(TRACK\d+)-(\d+)$", stem)
         if not match:
             continue
 
@@ -81,17 +83,19 @@ def verify_track(track_name, model):
         else:
             status = "FAIL"
 
-        results.append({
-            "file": stem,
-            "track": track_name,
-            "q_num": q_num,
-            "status": status,
-            "similarity": round(similarity, 4),
-            "orig_len": len(orig_clean),
-            "recog_len": len(recog_clean),
-            "original_preview": original[:80],
-            "recognized_preview": recognized[:80],
-        })
+        results.append(
+            {
+                "file": stem,
+                "track": track_name,
+                "q_num": q_num,
+                "status": status,
+                "similarity": round(similarity, 4),
+                "orig_len": len(orig_clean),
+                "recog_len": len(recog_clean),
+                "original_preview": original[:80],
+                "recognized_preview": recognized[:80],
+            }
+        )
 
     return results
 
@@ -103,20 +107,21 @@ def main():
     if not target_tracks:
         # 분할 음원이 있는 모든 트랙
         all_splits = sorted(SPLIT_AUDIO_DIR.glob("TRACK*-[0-9][0-9].mp3"))
-        target_tracks = sorted(set(
-            re.match(r'(TRACK\d+)', f.stem).group(1)
-            for f in all_splits if re.match(r'(TRACK\d+)', f.stem)
-        ))
+        target_tracks = sorted(
+            set(
+                re.match(r"(TRACK\d+)", f.stem).group(1)
+                for f in all_splits
+                if re.match(r"(TRACK\d+)", f.stem)
+            )
+        )
 
-    total_files = sum(
-        len(list(SPLIT_AUDIO_DIR.glob(f"{t}-[0-9][0-9].mp3")))
-        for t in target_tracks
-    )
+    total_files = sum(len(list(SPLIT_AUDIO_DIR.glob(f"{t}-[0-9][0-9].mp3"))) for t in target_tracks)
     print(f"검증 대상: {len(target_tracks)}개 트랙, {total_files}개 파일\n")
 
     # FunASR 모델 로드
     print("FunASR 모델 로딩 중...")
     from funasr import AutoModel
+
     model = AutoModel(
         model="paraformer-zh",
         vad_model="fsmn-vad",
@@ -140,8 +145,10 @@ def main():
                 print(f"  [{done}/{total_files}] {r['file']}: ERROR - {r['detail']}")
             else:
                 mark = {"OK": "O", "WARN": "!", "FAIL": "X"}[r["status"]]
-                print(f"  [{done}/{total_files}] {r['file']}: [{mark}] {r['similarity']:.1%} "
-                      f"({r['orig_len']}자 vs {r['recog_len']}자)")
+                print(
+                    f"  [{done}/{total_files}] {r['file']}: [{mark}] {r['similarity']:.1%} "
+                    f"({r['orig_len']}자 vs {r['recog_len']}자)"
+                )
                 if r["status"] != "OK":
                     print(f"    원본: {r['original_preview']}")
                     print(f"    인식: {r['recognized_preview']}")
@@ -154,7 +161,7 @@ def main():
         json.dump(all_results, f, ensure_ascii=False, indent=2)
 
     # 요약
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     ok = sum(1 for r in all_results if r["status"] == "OK")
     warn = sum(1 for r in all_results if r["status"] == "WARN")
     fail = sum(1 for r in all_results if r["status"] == "FAIL")
@@ -164,10 +171,12 @@ def main():
     print(f"  OK: {ok}  WARN: {warn}  FAIL: {fail}  ERROR: {err}  SKIP: {skip}")
 
     if warn + fail > 0:
-        print(f"\n문제 파일:")
+        print("\n문제 파일:")
         for r in all_results:
             if r["status"] in ("WARN", "FAIL"):
-                print(f"  {r['file']}: {r['similarity']:.1%} ({r['orig_len']}자 vs {r['recog_len']}자)")
+                print(
+                    f"  {r['file']}: {r['similarity']:.1%} ({r['orig_len']}자 vs {r['recog_len']}자)"
+                )
 
     print(f"\n결과 저장: {output_path}")
 

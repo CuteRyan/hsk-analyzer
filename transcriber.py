@@ -15,6 +15,7 @@ class Transcriber:
     def _get_model(self):
         if self._model is None:
             from funasr import AutoModel
+
             self._model = AutoModel(
                 model="paraformer-zh",
                 vad_model="fsmn-vad",

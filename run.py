@@ -4,30 +4,34 @@ import argparse
 import io
 import os
 import sys
-import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # Windows 콘솔 UTF-8 출력 설정
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
+    sys.stderr = io.TextIOWrapper(
+        sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
-from openai import OpenAI
+from openai import OpenAI  # noqa: E402
 
-import config
-from config import MP3_SOURCES, OUTPUT_DIR
-from transcriber import Transcriber
-from analyzer import Analyzer
-from renderer import Renderer
-from cache_manager import CacheManager
-from models import TrackAnalysis
+import config  # noqa: E402
+from analyzer import Analyzer  # noqa: E402
+from cache_manager import CacheManager  # noqa: E402
+from config import MP3_SOURCES, OUTPUT_DIR  # noqa: E402
+from models import TrackAnalysis  # noqa: E402
+from renderer import Renderer  # noqa: E402
+from transcriber import Transcriber  # noqa: E402
 
 
 def print_progress(msg: str):
@@ -36,10 +40,14 @@ def print_progress(msg: str):
     print(f"[{timestamp}] {msg}")
 
 
-def process_single_track(mp3_path: Path, client: OpenAI,
-                         cache: CacheManager, transcriber: Transcriber,
-                         force: bool = False,
-                         force_analysis: bool = False) -> TrackAnalysis:
+def process_single_track(
+    mp3_path: Path,
+    client: OpenAI,
+    cache: CacheManager,
+    transcriber: Transcriber,
+    force: bool = False,
+    force_analysis: bool = False,
+) -> TrackAnalysis:
     """단일 MP3 트랙을 처리 (음성인식 → 분석). TrackAnalysis 반환."""
     track_name = mp3_path.stem
 
@@ -49,24 +57,27 @@ def process_single_track(mp3_path: Path, client: OpenAI,
         transcription = cache.get_transcription(track_name) or ""
         analyses = cache.get_analysis(track_name) or []
         # SentenceAnalysis 리스트로 복원
-        from models import SentenceAnalysis, WordBreakdown, GrammarPoint
+        from models import GrammarPoint, SentenceAnalysis, WordBreakdown
+
         sentences = []
         for s in analyses:
-            words = [WordBreakdown(**w) if isinstance(w, dict) else w
-                     for w in s.get("words", [])]
-            grammar = [GrammarPoint(**g) if isinstance(g, dict) else g
-                       for g in s.get("grammar_points", [])]
-            sentences.append(SentenceAnalysis(
-                sentence_index=s["sentence_index"],
-                original=s["original"],
-                pinyin_full=s["pinyin_full"],
-                words=words,
-                grammar_points=grammar,
-                translation_ko=s["translation_ko"],
-                translation_literal_ko=s["translation_literal_ko"],
-                difficulty_note=s["difficulty_note"],
-                role=s.get("role", ""),
-            ))
+            words = [WordBreakdown(**w) if isinstance(w, dict) else w for w in s.get("words", [])]
+            grammar = [
+                GrammarPoint(**g) if isinstance(g, dict) else g for g in s.get("grammar_points", [])
+            ]
+            sentences.append(
+                SentenceAnalysis(
+                    sentence_index=s["sentence_index"],
+                    original=s["original"],
+                    pinyin_full=s["pinyin_full"],
+                    words=words,
+                    grammar_points=grammar,
+                    translation_ko=s["translation_ko"],
+                    translation_literal_ko=s["translation_literal_ko"],
+                    difficulty_note=s["difficulty_note"],
+                    role=s.get("role", ""),
+                )
+            )
         return TrackAnalysis(
             track_name=track_name,
             source_path=str(mp3_path),
@@ -80,23 +91,23 @@ def process_single_track(mp3_path: Path, client: OpenAI,
 
     # 1단계: 음성 인식 (캐시 있으면 스킵)
     if force:
-        print_progress(f"  1/2 음성 인식 중... (Paraformer-zh)")
+        print_progress("  1/2 음성 인식 중... (Paraformer-zh)")
         transcription = transcriber.transcribe_file(mp3_path)
     else:
         transcription = cache.get_transcription(track_name)
         if transcription is None:
-            print_progress(f"  1/2 음성 인식 중... (Paraformer-zh)")
+            print_progress("  1/2 음성 인식 중... (Paraformer-zh)")
             transcription = transcriber.transcribe_file(mp3_path)
         else:
-            print_progress(f"  1/2 음성 인식: 캐시 사용")
+            print_progress("  1/2 음성 인식: 캐시 사용")
     print_progress(f"  > 인식 완료 ({len(transcription)}자)")
 
     # 2단계: 구두점 교정 + 문장 분석
-    print_progress(f"  2/2 문장 분석 중...")
+    print_progress("  2/2 문장 분석 중...")
     analyzer = Analyzer(client, cache)
-    analyses = analyzer.analyze_track(track_name, transcription,
-                                      progress_callback=print_progress,
-                                      force=True)
+    analyses = analyzer.analyze_track(
+        track_name, transcription, progress_callback=print_progress, force=True
+    )
     print_progress(f"  > 분석 완료 ({len(analyses)}문장)")
 
     return TrackAnalysis(
@@ -133,27 +144,30 @@ def main():
   python run.py --model gpt-5-mini --track TRACK001.mp3  # 모델 지정
         """,
     )
-    parser.add_argument("--track", type=str,
-                        help="단일 트랙 파일명 (예: TRACK001.mp3)")
-    parser.add_argument("--file", type=str,
-                        help="MP3 파일 전체 경로")
-    parser.add_argument("--range", type=int, nargs=2,
-                        metavar=("START", "END"),
-                        help="트랙 번호 범위 (예: 1 10)")
-    parser.add_argument("--all", action="store_true",
-                        help="선택된 소스의 전체 트랙 처리")
-    parser.add_argument("--source",
-                        choices=["listening", "vocabulary"],
-                        default="listening",
-                        help="MP3 소스 선택 (기본: listening)")
-    parser.add_argument("--force", action="store_true",
-                        help="캐시 무시하고 전체 재처리 (음성인식+분석)")
-    parser.add_argument("--force-analysis", action="store_true",
-                        help="분석만 재실행 (음성인식 캐시는 유지)")
-    parser.add_argument("--model", type=str, default=None,
-                        help="GPT 모델 지정 (기본: config.py 설정값)")
-    parser.add_argument("--workers", type=int, default=1,
-                        help="병렬 처리 워커 수 (기본: 1, 권장: 5~10)")
+    parser.add_argument("--track", type=str, help="단일 트랙 파일명 (예: TRACK001.mp3)")
+    parser.add_argument("--file", type=str, help="MP3 파일 전체 경로")
+    parser.add_argument(
+        "--range", type=int, nargs=2, metavar=("START", "END"), help="트랙 번호 범위 (예: 1 10)"
+    )
+    parser.add_argument("--all", action="store_true", help="선택된 소스의 전체 트랙 처리")
+    parser.add_argument(
+        "--source",
+        choices=["listening", "vocabulary"],
+        default="listening",
+        help="MP3 소스 선택 (기본: listening)",
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="캐시 무시하고 전체 재처리 (음성인식+분석)"
+    )
+    parser.add_argument(
+        "--force-analysis", action="store_true", help="분석만 재실행 (음성인식 캐시는 유지)"
+    )
+    parser.add_argument(
+        "--model", type=str, default=None, help="GPT 모델 지정 (기본: config.py 설정값)"
+    )
+    parser.add_argument(
+        "--workers", type=int, default=1, help="병렬 처리 워커 수 (기본: 1, 권장: 5~10)"
+    )
 
     args = parser.parse_args()
 
@@ -177,7 +191,7 @@ def main():
     elif args.range:
         start, end = args.range
         all_files = collect_mp3_files(args.source)
-        files = all_files[start - 1:end]
+        files = all_files[start - 1 : end]
     elif args.all:
         files = collect_mp3_files(args.source)
     else:
@@ -196,7 +210,7 @@ def main():
 
     files = existing
     workers = args.workers
-    print_progress(f"=== HSK 분석기 시작 (Paraformer-zh) ===")
+    print_progress("=== HSK 분석기 시작 (Paraformer-zh) ===")
     print_progress(f"GPT 모델: {config.GPT_MODEL}")
     print_progress(f"처리 대상: {len(files)}개 파일 (워커: {workers}개)")
     print()
@@ -216,8 +230,12 @@ def main():
         thread_client = OpenAI()
         _safe_print(f"[{idx}/{len(files)}] {mp3_path.name}")
         track_data = process_single_track(
-            mp3_path, thread_client, cache, transcriber,
-            force=args.force, force_analysis=args.force_analysis
+            mp3_path,
+            thread_client,
+            cache,
+            transcriber,
+            force=args.force,
+            force_analysis=args.force_analysis,
         )
         return track_data
 
@@ -227,8 +245,12 @@ def main():
             print_progress(f"[{i}/{len(files)}] {mp3_path.name}")
             try:
                 track_data = process_single_track(
-                    mp3_path, client, cache, transcriber,
-                    force=args.force, force_analysis=args.force_analysis
+                    mp3_path,
+                    client,
+                    cache,
+                    transcriber,
+                    force=args.force,
+                    force_analysis=args.force_analysis,
                 )
                 track_analyses.append(track_data)
             except Exception as e:
@@ -239,9 +261,7 @@ def main():
         # 병렬 처리
         tasks = list(enumerate(files, 1))
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            future_map = {
-                executor.submit(_process_one, t): t for t in tasks
-            }
+            future_map = {executor.submit(_process_one, t): t for t in tasks}
             for future in as_completed(future_map):
                 idx, mp3_path = future_map[future]
                 try:
@@ -272,17 +292,19 @@ def main():
         # 목록 페이지
         index_data = []
         for t in track_analyses:
-            index_data.append({
-                "track_name": t.track_name,
-                "filename": f"{t.track_name}.html",
-                "success": True,
-                "sentence_count": len(t.sentences),
-                "source": args.source,
-            })
+            index_data.append(
+                {
+                    "track_name": t.track_name,
+                    "filename": f"{t.track_name}.html",
+                    "success": True,
+                    "sentence_count": len(t.sentences),
+                    "source": args.source,
+                }
+            )
         renderer.render_index(index_data)
 
     # 요약
-    print_progress(f"=== 완료 ===")
+    print_progress("=== 완료 ===")
     print_progress(f"성공: {len(track_analyses)}/{len(files)}")
     if errors:
         print_progress(f"실패: {', '.join(errors)}")

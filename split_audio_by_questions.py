@@ -10,14 +10,17 @@ import io
 import json
 import re
 import sys
-import os
-from pathlib import Path
 
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
+    sys.stderr = io.TextIOWrapper(
+        sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
 
 from pydub import AudioSegment
+
 from config import MP3_SOURCES, OUTPUT_DIR, TRANSCRIPTION_CACHE
 
 SPLIT_AUDIO_DIR = OUTPUT_DIR / "audio_splits"
@@ -25,7 +28,7 @@ SPLIT_AUDIO_DIR = OUTPUT_DIR / "audio_splits"
 
 def strip_punc(text):
     """구두점/공백 제거하여 raw 문자열 반환"""
-    return re.sub(r'[，。！？、；：""''（）《》【】\s,.!?;:\s]', '', text)
+    return re.sub(r'[，。！？、；：""' r"（）《》【】\s,.!?;:\s]", "", text)
 
 
 def build_raw_mapping(funasr_text):
@@ -33,7 +36,7 @@ def build_raw_mapping(funasr_text):
     raw_chars = []
     raw_to_ts_idx = []
     ts_idx = 0
-    punc_pattern = re.compile(r'[，。！？、；：""''（）《》【】\s,.!?;:\s]')
+    punc_pattern = re.compile(r'[，。！？、；：""' r"（）《》【】\s,.!?;:\s]")
 
     for ch in funasr_text:
         if punc_pattern.match(ch):
@@ -42,7 +45,7 @@ def build_raw_mapping(funasr_text):
         raw_to_ts_idx.append(ts_idx)
         ts_idx += 1
 
-    return ''.join(raw_chars), raw_to_ts_idx
+    return "".join(raw_chars), raw_to_ts_idx
 
 
 def find_text_in_raw(search_text, raw_str, search_from=0):
@@ -57,8 +60,7 @@ def find_text_in_raw(search_text, raw_str, search_from=0):
         return None, None
 
     # 마커 제거 버전
-    no_marker = strip_punc(
-        re.sub(r'^[一二三四五六七八九十]+[、，,.\s]+', '', search_text))
+    no_marker = strip_punc(re.sub(r"^[一二三四五六七八九十]+[、，,.\s]+", "", search_text))
 
     # 검색 후보: (검색키, 매칭 길이)
     candidates = []
@@ -105,8 +107,7 @@ def get_timestamp_at(pos, raw_to_ts_idx, timestamps, use_end=False):
     return timestamps[ts_idx][1 if use_end else 0]
 
 
-def find_question_boundaries(q_sentences, raw_str, raw_to_ts_idx,
-                              timestamps, search_from=0):
+def find_question_boundaries(q_sentences, raw_str, raw_to_ts_idx, timestamps, search_from=0):
     """문제의 모든 문장에 대해 시작/끝 타임스탬프를 찾는다.
 
     반환: (start_ms, end_ms, new_search_from) 또는 (None, None, search_from)
@@ -125,8 +126,8 @@ def find_question_boundaries(q_sentences, raw_str, raw_to_ts_idx,
         if first_start is not None:
             start_ms = get_timestamp_at(first_start, raw_to_ts_idx, timestamps)
             end_ms = get_timestamp_at(
-                min(all_end - 1, len(raw_to_ts_idx) - 1),
-                raw_to_ts_idx, timestamps, use_end=True)
+                min(all_end - 1, len(raw_to_ts_idx) - 1), raw_to_ts_idx, timestamps, use_end=True
+            )
             return start_ms, end_ms, (all_end if all_end else search_from)
         return None, None, search_from
 
@@ -144,15 +145,14 @@ def find_question_boundaries(q_sentences, raw_str, raw_to_ts_idx,
         last_end = first_start + len(all_raw)
 
     end_ms = get_timestamp_at(
-        min(last_end - 1, len(raw_to_ts_idx) - 1),
-        raw_to_ts_idx, timestamps, use_end=True)
+        min(last_end - 1, len(raw_to_ts_idx) - 1), raw_to_ts_idx, timestamps, use_end=True
+    )
 
     new_search = last_end if last_end else first_start + 1
     return start_ms, end_ms, new_search
 
 
-def split_track(track_name, mp3_path, model, padding_before=500,
-                padding_after=800):
+def split_track(track_name, mp3_path, model, padding_before=500, padding_after=800):
     """단일 트랙을 questions 배열 기반으로 정밀 분할.
 
     padding_before: 시작점 앞 여유 (ms) - 문제 번호 마커 포함
@@ -169,14 +169,14 @@ def split_track(track_name, mp3_path, model, padding_before=500,
         return []
 
     # FunASR 타임스탬프 추출
-    print(f"  FunASR 타임스탬프 추출 중...")
+    print("  FunASR 타임스탬프 추출 중...")
     res = model.generate(input=str(mp3_path), batch_size_s=300)
     r = res[0]
     funasr_text = r.get("text", "")
     timestamps = r.get("timestamp", [])
 
     if not timestamps:
-        print(f"  경고: 타임스탬프 없음, 건너뜀")
+        print("  경고: 타임스탬프 없음, 건너뜀")
         return []
 
     raw_str, raw_to_ts_idx = build_raw_mapping(funasr_text)
@@ -192,23 +192,25 @@ def split_track(track_name, mp3_path, model, padding_before=500,
             continue
 
         start_ms, end_ms, new_search = find_question_boundaries(
-            q_sentences, raw_str, raw_to_ts_idx, timestamps, search_from)
+            q_sentences, raw_str, raw_to_ts_idx, timestamps, search_from
+        )
 
         if start_ms is not None and end_ms is not None:
             question_bounds.append((q_num, start_ms, end_ms))
             search_from = new_search
             first_text = q_sentences[0]["text"]
             last_text = q_sentences[-1]["text"]
-            print(f"    문제 {q_num}: {start_ms/1000:.1f}s ~ {end_ms/1000:.1f}s "
-                  f"({(end_ms-start_ms)/1000:.1f}s) "
-                  f"\"{first_text[:15]}...{last_text[-10:]}\"")
+            print(
+                f"    문제 {q_num}: {start_ms / 1000:.1f}s ~ {end_ms / 1000:.1f}s "
+                f"({(end_ms - start_ms) / 1000:.1f}s) "
+                f'"{first_text[:15]}...{last_text[-10:]}"'
+            )
         else:
             first_text = q_sentences[0]["text"] if q_sentences else ""
-            print(f"    문제 {q_num}: 위치 찾기 실패 - \"{first_text[:20]}...\"")
+            print(f'    문제 {q_num}: 위치 찾기 실패 - "{first_text[:20]}..."')
 
     if len(question_bounds) < 2:
-        print(f"  경고: 시작 지점을 충분히 찾지 못함 "
-              f"({len(question_bounds)}/{len(questions)})")
+        print(f"  경고: 시작 지점을 충분히 찾지 못함 ({len(question_bounds)}/{len(questions)})")
         return []
 
     # 오디오 로드 및 분할
@@ -238,13 +240,12 @@ def split_track(track_name, mp3_path, model, padding_before=500,
         output_files.append(out_path)
 
         dur = len(segment) / 1000
-        print(f"    -> {out_name}: {dur:.1f}s ({seg_start/1000:.1f}s ~ {seg_end/1000:.1f}s)")
+        print(f"    -> {out_name}: {dur:.1f}s ({seg_start / 1000:.1f}s ~ {seg_end / 1000:.1f}s)")
 
     return output_files
 
 
 def main():
-    from config import MP3_SOURCES
     source_dir = MP3_SOURCES["listening"]
 
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -269,6 +270,7 @@ def main():
 
     print("FunASR 모델 로딩 중...")
     from funasr import AutoModel
+
     model = AutoModel(
         model="paraformer-zh",
         vad_model="fsmn-vad",
@@ -288,10 +290,11 @@ def main():
         except Exception as e:
             print(f"  오류: {e}")
             import traceback
+
             traceback.print_exc()
             results[track_name] = 0
 
-    print(f"\n=== 완료 ===")
+    print("\n=== 완료 ===")
     total = sum(results.values())
     print(f"총 {total}개 오디오 파일 생성")
     for t, n in results.items():

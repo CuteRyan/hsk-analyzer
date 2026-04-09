@@ -4,16 +4,25 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import List
+
 from jinja2 import Environment, FileSystemLoader
 
-from models import TrackAnalysis, SentenceAnalysis, WordBreakdown, GrammarPoint
-from config import OUTPUT_DIR, TEMPLATES_DIR, SOURCE_LABELS, TRANSCRIPTION_CACHE, ANALYSIS_CACHE
-
+from config import ANALYSIS_CACHE, OUTPUT_DIR, SOURCE_LABELS, TEMPLATES_DIR, TRANSCRIPTION_CACHE
+from models import GrammarPoint, SentenceAnalysis, TrackAnalysis, WordBreakdown
 
 # 중국어 숫자 → 정수 변환
-_CN_NUM = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
-           '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
+_CN_NUM = {
+    "一": 1,
+    "二": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+    "十": 10,
+}
 
 
 def _chinese_to_int(s: str) -> int:
@@ -22,15 +31,58 @@ def _chinese_to_int(s: str) -> int:
         return 0
     result = 0
     for ch in s:
-        if ch == '十':
+        if ch == "十":
             result = (result or 1) * 10
         else:
             result += _CN_NUM.get(ch, 0)
     return result
 
 
+def _build_ruby_html(original: str, words: list) -> str:
+    """original 텍스트 기준으로 words를 순서대로 매칭하여 ruby HTML 생성.
+    매칭되지 않는 글자는 ruby 없이 그대로 출력 (GPT 단어 누락 방어)."""
+    if not words:
+        return original
+
+    html_parts = []
+    pos = 0
+    text = original
+
+    for w in words:
+        word = (
+            w.word if isinstance(w, str) else (w.word if hasattr(w, "word") else w.get("word", ""))
+        )
+        pinyin = (
+            ""
+            if isinstance(w, str)
+            else (w.pinyin if hasattr(w, "pinyin") else w.get("pinyin", ""))
+        )
+
+        idx = text.find(word, pos)
+        if idx == -1:
+            # 구두점 제거 후 재탐색
+            continue
+
+        # 매칭 이전의 글자들 (GPT가 빠뜨린 부분) → ruby 없이 출력
+        if idx > pos:
+            gap = text[pos:idx]
+            # 구두점은 그대로, 한자는 span으로 표시
+            html_parts.append(gap)
+
+        # 매칭된 단어 → ruby 태그
+        html_parts.append(f"<ruby>{word}<rt>{pinyin}</rt></ruby>")
+        pos = idx + len(word)
+
+    # 남은 뒷부분 (문장 끝 구두점 등)
+    if pos < len(text):
+        html_parts.append(text[pos:])
+
+    return "".join(html_parts)
+
+
 class TrackWithAudio:
     """TrackAnalysis에 audio_path를 추가한 래퍼"""
+
     def __init__(self, track: TrackAnalysis, audio_path: str):
         self._track = track
         self.audio_path = audio_path
@@ -41,18 +93,15 @@ class TrackWithAudio:
 
 class Renderer:
     def __init__(self):
-        self.env = Environment(
-            loader=FileSystemLoader(str(TEMPLATES_DIR)),
-            autoescape=False
-        )
+        self.env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=False)
+        # original 기준 ruby HTML 생성 필터 등록
+        self.env.globals["build_ruby"] = _build_ruby_html
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     def render_track(self, track: TrackAnalysis) -> Path:
         """트랙 분석 결과를 HTML로 렌더링"""
         template = self.env.get_template("track.html")
-        audio_rel_path = os.path.relpath(
-            track.source_path, str(OUTPUT_DIR)
-        ).replace("\\", "/")
+        audio_rel_path = os.path.relpath(track.source_path, str(OUTPUT_DIR)).replace("\\", "/")
         html = template.render(track=track, audio_path=audio_rel_path)
         output_path = OUTPUT_DIR / f"{track.track_name}.html"
         output_path.write_text(html, encoding="utf-8")
@@ -70,13 +119,13 @@ class Renderer:
 
         # 트랜스크립션에서 문제 번호 마커 찾기
         marker_re = re.compile(
-            r'(?:^|(?<=[。？！?!\s]))'
-            r'\s*'
-            r'(?:'
-            r'([一二三四五六七八九十]{1,3})'
-            r'|(\d{1,2})'
-            r')'
-            r'(?=[。.\s、])'
+            r"(?:^|(?<=[。？！?!\s]))"
+            r"\s*"
+            r"(?:"
+            r"([一二三四五六七八九十]{1,3})"
+            r"|(\d{1,2})"
+            r")"
+            r"(?=[。.\s、])"
         )
 
         markers = []
@@ -110,7 +159,7 @@ class Renderer:
         sentence_positions = []
         search_from = 0
         for s in sentences:
-            clean = re.sub(r'^\d+\.\s*', '', s.original)
+            clean = re.sub(r"^\d+\.\s*", "", s.original)
             pos = transcription.find(clean, search_from)
             if pos >= 0:
                 sentence_positions.append(pos)
@@ -128,23 +177,19 @@ class Renderer:
         # 마커별로 문장 그룹화
         groups = []
         for i, (marker_pos, num) in enumerate(markers):
-            next_pos = (markers[i + 1][0]
-                        if i + 1 < len(markers) else len(transcription))
+            next_pos = markers[i + 1][0] if i + 1 < len(markers) else len(transcription)
             group_sents = [
-                s for s, pos in zip(sentences, sentence_positions)
-                if marker_pos <= pos < next_pos
+                s for s, pos in zip(sentences, sentence_positions) if marker_pos <= pos < next_pos
             ]
             if group_sents:
                 groups.append({"question_num": num, "sentences": group_sents})
 
         # 첫 마커 이전 문장 (도입부)
-        pre = [s for s, pos in zip(sentences, sentence_positions)
-               if pos < markers[0][0]]
+        pre = [s for s, pos in zip(sentences, sentence_positions) if pos < markers[0][0]]
         if pre:
             groups.insert(0, {"question_num": 0, "sentences": pre})
 
-        return groups if len(groups) > 1 else [
-            {"question_num": None, "sentences": sentences}]
+        return groups if len(groups) > 1 else [{"question_num": None, "sentences": sentences}]
 
     def _load_split_track(self, sub_name: str) -> TrackAnalysis:
         """분할 캐시(TRACK010-1.json 등)에서 TrackAnalysis 로드"""
@@ -161,21 +206,26 @@ class Renderer:
             with open(anal_file, encoding="utf-8") as f:
                 data = json.load(f)
             for s in data.get("analyses", []):
-                words = [WordBreakdown(**w) if isinstance(w, dict) else w
-                         for w in s.get("words", [])]
-                grammar = [GrammarPoint(**g) if isinstance(g, dict) else g
-                           for g in s.get("grammar_points", [])]
-                sentences.append(SentenceAnalysis(
-                    sentence_index=s["sentence_index"],
-                    original=s["original"],
-                    pinyin_full=s["pinyin_full"],
-                    words=words,
-                    grammar_points=grammar,
-                    translation_ko=s["translation_ko"],
-                    translation_literal_ko=s["translation_literal_ko"],
-                    difficulty_note=s["difficulty_note"],
-                    role=s.get("role", ""),
-                ))
+                words = [
+                    WordBreakdown(**w) if isinstance(w, dict) else w for w in s.get("words", [])
+                ]
+                grammar = [
+                    GrammarPoint(**g) if isinstance(g, dict) else g
+                    for g in s.get("grammar_points", [])
+                ]
+                sentences.append(
+                    SentenceAnalysis(
+                        sentence_index=s["sentence_index"],
+                        original=s["original"],
+                        pinyin_full=s["pinyin_full"],
+                        words=words,
+                        grammar_points=grammar,
+                        translation_ko=s["translation_ko"],
+                        translation_literal_ko=s["translation_literal_ko"],
+                        difficulty_note=s["difficulty_note"],
+                        role=s.get("role", ""),
+                    )
+                )
 
         return TrackAnalysis(
             track_name=sub_name,
@@ -191,6 +241,7 @@ class Renderer:
         반환: [{"question_num": int, "sentences": [...]}] (번호순 정렬)
         """
         import glob as globmod
+
         pattern = str(ANALYSIS_CACHE / f"{track_name}-*.json")
         split_files = sorted(globmod.glob(pattern))
 
@@ -200,7 +251,7 @@ class Renderer:
         questions = []
         for anal_path in split_files:
             sub_name = Path(anal_path).stem  # TRACK010-1
-            match = re.match(r'.+-(\d+)$', sub_name)
+            match = re.match(r".+-(\d+)$", sub_name)
             if not match:
                 continue
             q_num = int(match.group(1))
@@ -209,17 +260,20 @@ class Renderer:
             if not sub_track.sentences:
                 continue
 
-            questions.append({
-                "question_num": q_num,
-                "sentences": list(sub_track.sentences),
-            })
+            questions.append(
+                {
+                    "question_num": q_num,
+                    "sentences": list(sub_track.sentences),
+                }
+            )
 
         # 번호순 정렬
         questions.sort(key=lambda q: q["question_num"])
         return questions
 
-    def _load_questions_from_transcription(self, track_name: str,
-                                             sentences: List[SentenceAnalysis]) -> list:
+    def _load_questions_from_transcription(
+        self, track_name: str, sentences: list[SentenceAnalysis]
+    ) -> list:
         """transcription JSON의 questions 배열을 읽어서
         analysis의 SentenceAnalysis 객체와 매칭하여 문제별 그룹 반환.
         반환: [{"question_num": int, "sentences": [SentenceAnalysis, ...]}]
@@ -251,22 +305,25 @@ class Renderer:
                 split_audio = OUTPUT_DIR / "audio_splits" / f"{track_name}-{q_num:02d}.mp3"
                 audio_path = ""
                 if split_audio.exists():
-                    audio_path = os.path.relpath(
-                        str(split_audio), str(OUTPUT_DIR)
-                    ).replace("\\", "/")
-                result.append({
-                    "question_num": q_num,
-                    "sentences": q_sents,
-                    "audio_path": audio_path,
-                })
+                    audio_path = os.path.relpath(str(split_audio), str(OUTPUT_DIR)).replace(
+                        "\\", "/"
+                    )
+                result.append(
+                    {
+                        "question_num": q_num,
+                        "sentences": q_sents,
+                        "audio_path": audio_path,
+                    }
+                )
 
         return result
 
-    def render_split_tracks(self, tracks: List[TrackAnalysis]) -> List[Path]:
+    def render_split_tracks(self, tracks: list[TrackAnalysis]) -> list[Path]:
         """분할된 문제별 트랙의 개별 HTML 생성.
         transcription 캐시에서 parent_track이 있는 분할 트랙을 찾아 렌더링.
         """
         import glob as globmod
+
         template = self.env.get_template("track.html")
         rendered = []
 
@@ -288,9 +345,9 @@ class Renderer:
                 parent_track = next((t for t in tracks if t.track_name == parent), None)
                 audio_rel = ""
                 if parent_track:
-                    audio_rel = os.path.relpath(
-                        parent_track.source_path, str(OUTPUT_DIR)
-                    ).replace("\\", "/")
+                    audio_rel = os.path.relpath(parent_track.source_path, str(OUTPUT_DIR)).replace(
+                        "\\", "/"
+                    )
 
                 # 개별 HTML에 parent_track, question_num 정보 전달
                 with open(trans_path, encoding="utf-8") as f:
@@ -308,7 +365,7 @@ class Renderer:
 
         return rendered
 
-    def render_combined(self, tracks: List[TrackAnalysis], source: str) -> Path:
+    def render_combined(self, tracks: list[TrackAnalysis], source: str) -> Path:
         """소스별 전체 트랙을 하나의 HTML로 통합 렌더링.
         - transcription JSON에 questions 배열이 있으면 문제별 그룹화
         - 없으면 기존 방식 (하나의 섹션)"""
@@ -319,13 +376,10 @@ class Renderer:
         total_sentences = 0
 
         for t in tracks:
-            audio_rel = os.path.relpath(
-                t.source_path, str(OUTPUT_DIR)
-            ).replace("\\", "/")
+            audio_rel = os.path.relpath(t.source_path, str(OUTPUT_DIR)).replace("\\", "/")
 
             # transcription JSON의 questions 배열에서 문제별 그룹화
-            questions = self._load_questions_from_transcription(
-                t.track_name, list(t.sentences))
+            questions = self._load_questions_from_transcription(t.track_name, list(t.sentences))
 
             tw = TrackWithAudio(t, audio_rel)
             tw.questions = questions if questions else None
@@ -341,7 +395,7 @@ class Renderer:
         output_path.write_text(html, encoding="utf-8")
         return output_path
 
-    def render_index(self, tracks: List[dict]) -> Path:
+    def render_index(self, tracks: list[dict]) -> Path:
         """전체 목록 페이지 렌더링"""
         template = self.env.get_template("index.html")
         html = template.render(tracks=tracks)

@@ -1,0 +1,95 @@
+{
+  "analyses": [
+    {
+      "sentence_index": 0,
+      "original": "快起飞了，你怎么还没系上安全带？",
+      "pinyin_full": "kuài qǐfēi le, nǐ zěnme hái méi jì shàng ānquándài?",
+      "words": [
+        {"word": "快", "pinyin": "kuài", "part_of_speech": "부사", "meaning_ko": "곧, 거의", "meaning_detail": "곧 어떤 상황이 될 것임을 나타내는 부사. \"快...了\" 구문에서 임박한 상황을 표현함. 형용사로 쓰이면 \"빠르다\"이지만, 여기서는 부사로 \"곧, 머지않아\"의 의미."},
+        {"word": "起飞", "pinyin": "qǐfēi", "part_of_speech": "동사", "meaning_ko": "이륙하다", "meaning_detail": "起(일어나다) + 飞(날다)의 합성어. 비행기가 땅에서 떠오르는 것. 반의어는 降落(jiàngluò, 착륙하다). 비유적으로 사업이나 경제가 급성장하는 것에도 사용."},
+        {"word": "了", "pinyin": "le", "part_of_speech": "어기조사", "meaning_ko": "~하게 되었다", "meaning_detail": "\"快...了\" 구문의 일부로, 상태 변화가 임박했음을 나타내는 어기조사. 완료의 \"了\"와 구별할 것."},
+        {"word": "你", "pinyin": "nǐ", "part_of_speech": "대명사", "meaning_ko": "너, 당신", "meaning_detail": "2인칭 대명사. 존칭은 您(nín)."},
+        {"word": "怎么", "pinyin": "zěnme", "part_of_speech": "부사", "meaning_ko": "어떻게, 왜", "meaning_detail": "여기서는 반문·놀라움의 어감으로 \"왜, 어째서\"의 의미. 상대방의 행동에 대한 의아함이나 불만을 표현. 방식을 묻는 \"어떻게\"와 원인을 묻는 \"왜\" 두 가지 용법이 있음."},
+        {"word": "还", "pinyin": "hái", "part_of_speech": "부사", "meaning_ko": "아직, 여전히", "meaning_detail": "예상과 달리 어떤 상태가 지속됨을 나타냄. \"还没\"은 \"아직 ~하지 않았다\"는 뜻. \"还是(여전히/아니면)\"와 구분 필요."},
+        {"word": "没", "pinyin": "méi", "part_of_speech": "부사", "meaning_ko": "~하지 않았다", "meaning_detail": "동작의 미완료를 나타내는 부정부사. \"不\"가 의지적 부정이라면 \"没\"는 사실적 부정(아직 발생하지 않음)."},
+        {"word": "系", "pinyin": "jì", "part_of_speech": "동사", "meaning_ko": "매다, 묶다", "meaning_detail": "多音字 주의: jì로 읽으면 \"매다, 묶다(系鞋带 신발끈을 매다)\", xì로 읽으면 \"계통, 관련되다(关系, 系统)\". 안전벨트를 매는 맥락에서는 반드시 jì. HSK 시험에서 자주 출제되는 다음자."},
+        {"word": "上", "pinyin": "shàng", "part_of_speech": "보어", "meaning_ko": "~하여 (결과보어)", "meaning_detail": "결과보어로서 동작이 완성되어 접촉·부착됨을 나타냄. \"系上(매어 채우다)\", \"穿上(입다)\", \"戴上(쓰다/끼다)\" 등. 방향보어 \"위로\"의 의미에서 파생."},
+        {"word": "安全带", "pinyin": "ānquándài", "part_of_speech": "명사", "meaning_ko": "안전벨트", "meaning_detail": "安全(안전) + 带(띠, 벨트)의 합성어. 비행기·자동차에서 모두 사용. \"系安全带(안전벨트를 매다)\"는 고정 표현."}
+      ],
+      "grammar_points": [
+        {"pattern": "快...了", "explanation_ko": "어떤 상황이 곧 실현될 것임을 나타내는 구문. \"거의 ~하게 되었다\"의 의미로, 임박한 변화를 표현합니다.", "example": "快下雨了，带上雨伞吧。(곧 비가 올 거야, 우산 챙겨.)"},
+        {"pattern": "还没 + 동사", "explanation_ko": "\"아직 ~하지 않았다\"는 미완료 상태를 나타내는 부정 표현. 예상되는 동작이 아직 완료되지 않았음을 강조합니다.", "example": "都十点了，你怎么还没起床？(벌써 10시인데, 왜 아직 안 일어났어?)"},
+        {"pattern": "동사 + 上 (결과보어)", "explanation_ko": "동작의 결과로 접촉·부착·완성이 이루어짐을 나타내는 결과보어.", "example": "请穿上外套，外面很冷。(겉옷을 입어, 밖에 많이 추워.)"},
+        {"pattern": "怎么 (반문/놀라움)", "explanation_ko": "의문이 아닌 반문의 어감으로, 상대방의 행동에 대한 의아함·불만을 표현합니다.", "example": "你怎么不吃饭？(너 왜 밥을 안 먹어?)"}
+      ],
+      "translation_ko": "곧 이륙하는데, 왜 아직도 안전벨트를 안 맸어?",
+      "translation_literal_ko": "곧 이륙한다, 너 왜 아직 매지 않았어 안전벨트를?",
+      "difficulty_note": "'系'는 대표적인 다음자(多音字)입니다. '매다'의 뜻일 때는 jì, '계통/관계'의 뜻일 때는 xì로 읽습니다. '快...了' 구문과 결과보어 '上'도 핵심 학습 포인트.",
+      "role": "화자A"
+    },
+    {
+      "sentence_index": 1,
+      "original": "哎呀，这可怎么办呢？",
+      "pinyin_full": "āiyā, zhè kě zěnme bàn ne?",
+      "words": [
+        {"word": "哎呀", "pinyin": "āiyā", "part_of_speech": "감탄사", "meaning_ko": "아이고, 이런", "meaning_detail": "놀라움·곤란함·안타까움 등을 표현하는 감탄사. 유사 표현: 哎哟(āiyō)는 주로 아플 때 사용."},
+        {"word": "这", "pinyin": "zhè", "part_of_speech": "대명사", "meaning_ko": "이것, 이", "meaning_detail": "지시대명사. 여기서는 현재 처한 난감한 상황 전체를 가리킴."},
+        {"word": "可", "pinyin": "kě", "part_of_speech": "부사", "meaning_ko": "도대체, 정말 (강조)", "meaning_detail": "강조 부사로 난감함·당혹감을 부각시킴. \"可怎么办\"은 \"도대체 어떻게 하지?\"라는 막막한 심정. 조동사 \"~할 수 있다(可以)\"와는 전혀 다른 용법. HSK 5급에서 자주 출제."},
+        {"word": "怎么", "pinyin": "zěnme", "part_of_speech": "대명사", "meaning_ko": "어떻게", "meaning_detail": "방법을 묻는 의문대명사. \"怎么办\"은 \"어떻게 하지\"라는 관용 표현."},
+        {"word": "办", "pinyin": "bàn", "part_of_speech": "동사", "meaning_ko": "처리하다, 해결하다", "meaning_detail": "\"怎么办(어떻게 하지)\", \"办法(방법)\", \"办公室(사무실)\" 등에서 사용."},
+        {"word": "呢", "pinyin": "ne", "part_of_speech": "어기조사", "meaning_ko": "~인데, ~하지?", "meaning_detail": "의문문 끝에 붙어 고민·곤혹스러운 어감을 더하는 어기조사. 단순 질문의 \"吗\"와 달리, 화자의 감정(곤란함, 궁금함)을 실어줌."}
+      ],
+      "grammar_points": [
+        {"pattern": "可 + 의문사 (강조)", "explanation_ko": "\"可\"가 부사로 쓰여 의문사 앞에서 곤란함·당혹감을 강조합니다. \"도대체, 정말\"의 뉘앙스를 더해줍니다.", "example": "这可怎么说呢？(이걸 도대체 어떻게 말하지?)"},
+        {"pattern": "怎么办", "explanation_ko": "\"어떻게 하지?\"라는 관용 표현. 곤란한 상황에서 해결책을 모를 때 사용.", "example": "钱丢了，怎么办？(돈을 잃어버렸는데, 어떡하지?)"}
+      ],
+      "translation_ko": "아이고, 이걸 도대체 어떻게 하지?",
+      "translation_literal_ko": "아이고, 이것 정말 어떻게 처리하지?",
+      "difficulty_note": "'可'는 '~할 수 있다(可以)'로 자주 배우지만, 여기서는 강조 부사로 쓰여 '도대체, 정말'의 의미입니다. 이 용법은 HSK 5급에서 자주 출제됩니다.",
+      "role": "화자B"
+    },
+    {
+      "sentence_index": 2,
+      "original": "我不小心把钱包落在出租车上了。",
+      "pinyin_full": "wǒ bù xiǎoxīn bǎ qiánbāo là zài chūzūchē shàng le.",
+      "words": [
+        {"word": "我", "pinyin": "wǒ", "part_of_speech": "대명사", "meaning_ko": "나", "meaning_detail": "1인칭 대명사."},
+        {"word": "不小心", "pinyin": "bù xiǎoxīn", "part_of_speech": "부사구", "meaning_ko": "부주의하게, 깜빡하고", "meaning_detail": "不(부정) + 小心(조심하다)의 결합. \"실수로, 조심하지 못하여\"라는 뜻. 반의어: 小心(조심하다). 관련 표현: 小心翼翼(매우 조심스럽게)."},
+        {"word": "把", "pinyin": "bǎ", "part_of_speech": "전치사", "meaning_ko": "~을/를 (처치문 표지)", "meaning_detail": "把자문의 핵심 전치사. 목적어를 동사 앞으로 이동시켜 목적어에 대한 처리·결과를 강조. 반드시 결과보어·방향보어·了 등이 동사 뒤에 와야 함. HSK 필수 문법."},
+        {"word": "钱包", "pinyin": "qiánbāo", "part_of_speech": "명사", "meaning_ko": "지갑", "meaning_detail": "钱(돈) + 包(가방)의 합성어. 돈이나 카드를 넣는 작은 가방."},
+        {"word": "落", "pinyin": "là", "part_of_speech": "동사", "meaning_ko": "두고 오다, 놓고 오다", "meaning_detail": "多音字 주의: là \"빠뜨리다, 두고 오다(落在家里 집에 두고 오다)\", luò \"떨어지다(落叶 낙엽)\", lào \"落枕(목을 삐다)\". 물건을 깜빡 두고 온 맥락에서는 반드시 là."},
+        {"word": "在", "pinyin": "zài", "part_of_speech": "전치사", "meaning_ko": "~에 (장소)", "meaning_detail": "동사 뒤에서 장소보어로 쓰여 동작의 결과로 사물이 위치하게 된 장소를 나타냄. \"放在桌子上(책상 위에 놓다)\", \"留在北京(베이징에 머물다)\" 등."},
+        {"word": "出租车", "pinyin": "chūzūchē", "part_of_speech": "명사", "meaning_ko": "택시", "meaning_detail": "出租(임대하다) + 车(차)의 합성어. 대륙 표현. 대만: 计程车, 홍콩: 的士. 구어: 打车(택시 타다), 打的(dǎdī)."},
+        {"word": "上", "pinyin": "shàng", "part_of_speech": "방위사", "meaning_ko": "위에, ~안에", "meaning_detail": "교통수단에는 \"在...上\"을 사용(在车上, 在飞机上). 한국어의 \"~안에\"와 다르게 \"上\"을 쓰는 점에 주의."},
+        {"word": "了", "pinyin": "le", "part_of_speech": "어기조사", "meaning_ko": "~했다 (완료)", "meaning_detail": "문장 끝에서 동작의 완료 또는 상황 변화를 나타냄."}
+      ],
+      "grammar_points": [
+        {"pattern": "把 + 목적어 + V + 在 + 장소", "explanation_ko": "把자문에서 동사 뒤에 \"在+장소\"를 결합하여, 목적어가 동작의 결과로 특정 장소에 위치하게 됨을 나타냅니다.", "example": "他把书放在桌子上了。(그는 책을 책상 위에 놓았다.)"},
+        {"pattern": "不小心 + 동사", "explanation_ko": "\"실수로, 부주의하게 ~하다\"를 나타내는 표현. 의도하지 않은 행동을 설명.", "example": "我不小心打碎了杯子。(실수로 컵을 깨뜨렸다.)"}
+      ],
+      "translation_ko": "깜빡하고 지갑을 택시에 두고 내렸어.",
+      "translation_literal_ko": "나 부주의하게 지갑을 두고왔다 택시 위에.",
+      "difficulty_note": "'落'은 대표적인 다음자(多音字)입니다. '물건을 두고 오다'는 là, '떨어지다/낙하하다'는 luò로 읽습니다. 把자문의 'V+在+장소' 구조는 HSK 5급 필수 문법입니다.",
+      "role": "화자B"
+    },
+    {
+      "sentence_index": 3,
+      "original": "他们现在在哪儿？",
+      "pinyin_full": "tāmen xiànzài zài nǎr?",
+      "words": [
+        {"word": "他们", "pinyin": "tāmen", "part_of_speech": "대명사", "meaning_ko": "그들", "meaning_detail": "他(그) + 们(복수 접미사). 3인칭 복수. 여성 복수는 她们, 사물은 它们. 발음은 모두 동일."},
+        {"word": "现在", "pinyin": "xiànzài", "part_of_speech": "명사/부사", "meaning_ko": "지금, 현재", "meaning_detail": "现(현재의) + 在(있다)의 합성어. 시간명사로 \"지금, 현재\". 유의어: 目前(mùqián)은 좀 더 격식적."},
+        {"word": "在", "pinyin": "zài", "part_of_speech": "동사", "meaning_ko": "~에 있다", "meaning_detail": "존재/위치를 나타내는 동사. \"现在在\"처럼 시간부사의 \"在\"와 동사 \"在\"가 연속으로 나오는 것이 자연스러운 중국어 표현."},
+        {"word": "哪儿", "pinyin": "nǎr", "part_of_speech": "대명사", "meaning_ko": "어디", "meaning_detail": "장소를 묻는 의문대명사. 북방 구어체 표현. 남방·서면어에서는 哪里(nǎlǐ)를 더 많이 사용. 둘 다 HSK에서 통용."}
+      ],
+      "grammar_points": [
+        {"pattern": "在 + 哪儿/哪里", "explanation_ko": "\"어디에 있다\"를 묻는 기본 의문문 구조. 중국어는 의문사가 문두로 이동하지 않고 해당 위치에 그대로 놓습니다.", "example": "你家在哪儿？(너희 집은 어디에 있어?)"},
+        {"pattern": "现在在 (시간부사 + 동사 在)", "explanation_ko": "시간명사 \"现在\"의 \"在\"와 동사 \"在\"가 연속으로 나타나는 자연스러운 구조.", "example": "你现在在做什么？(너 지금 뭐 하고 있어?)"}
+      ],
+      "translation_ko": "그들은 지금 어디에 있을까?",
+      "translation_literal_ko": "그들 지금 있다 어디?",
+      "difficulty_note": "이 문장은 듣기 문제의 질문 부분. '现在在'에서 '在'가 두 번 나오지만, 첫 번째는 현재(지금)의 일부이고 두 번째는 동사(~에 있다)입니다. 정답은 대화 내용(이륙, 안전벨트)에서 유추: 飞机上(비행기 안).",
+      "role": "질문"
+    }
+  ]
+}

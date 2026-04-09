@@ -4,13 +4,14 @@ import json
 import math
 import re
 import time
-from typing import List, Callable, Optional
+from collections.abc import Callable
+
 from openai import OpenAI
 
-from models import SentenceAnalysis, WordBreakdown, GrammarPoint
-from config import GPT_MODEL, ANALYSIS_BATCH_SIZE, API_DELAY_SECONDS
 from cache_manager import CacheManager
-
+from config import ANALYSIS_BATCH_SIZE, API_DELAY_SECONDS, GPT_MODEL
+from models import GrammarPoint, SentenceAnalysis, WordBreakdown
+from validator import validate_batch
 
 # GPT 구조화 출력을 위한 JSON 스키마
 ANALYSIS_SCHEMA = {
@@ -24,7 +25,7 @@ ANALYSIS_SCHEMA = {
                     "original": {"type": "string"},
                     "pinyin_full": {
                         "type": "string",
-                        "description": "성조 부호(ā á ǎ à)를 사용한 전체 병음"
+                        "description": "성조 부호(ā á ǎ à)를 사용한 전체 병음",
                     },
                     "words": {
                         "type": "array",
@@ -35,15 +36,20 @@ ANALYSIS_SCHEMA = {
                                 "pinyin": {"type": "string"},
                                 "part_of_speech": {
                                     "type": "string",
-                                    "description": "품사 (명사/동사/형용사/부사/전치사/접속사/조사/양사/대사/감탄사)"
+                                    "description": "품사 (명사/동사/형용사/부사/전치사/접속사/조사/양사/대사/감탄사)",
                                 },
                                 "meaning_ko": {"type": "string"},
-                                "meaning_detail": {"type": "string"}
+                                "meaning_detail": {"type": "string"},
                             },
-                            "required": ["word", "pinyin", "part_of_speech",
-                                         "meaning_ko", "meaning_detail"],
-                            "additionalProperties": False
-                        }
+                            "required": [
+                                "word",
+                                "pinyin",
+                                "part_of_speech",
+                                "meaning_ko",
+                                "meaning_detail",
+                            ],
+                            "additionalProperties": False,
+                        },
                     },
                     "grammar_points": {
                         "type": "array",
@@ -52,34 +58,42 @@ ANALYSIS_SCHEMA = {
                             "properties": {
                                 "pattern": {"type": "string"},
                                 "explanation_ko": {"type": "string"},
-                                "example": {"type": "string"}
+                                "example": {"type": "string"},
                             },
                             "required": ["pattern", "explanation_ko", "example"],
-                            "additionalProperties": False
-                        }
+                            "additionalProperties": False,
+                        },
                     },
                     "translation_ko": {"type": "string"},
                     "translation_literal_ko": {
                         "type": "string",
-                        "description": "단어 순서대로 직역한 한국어"
+                        "description": "단어 순서대로 직역한 한국어",
                     },
                     "difficulty_note": {
                         "type": "string",
-                        "description": "학습 팁이나 주의사항 (한국어)"
+                        "description": "학습 팁이나 주의사항 (한국어)",
                     },
                     "role": {
                         "type": "string",
-                        "description": "화자 역할: 화자A/화자B/화자C/나레이터/질문 중 하나"
-                    }
+                        "description": "화자 역할: 화자A/화자B/화자C/나레이터/질문 중 하나",
+                    },
                 },
-                "required": ["original", "pinyin_full", "words", "grammar_points",
-                             "translation_ko", "translation_literal_ko", "difficulty_note", "role"],
-                "additionalProperties": False
-            }
+                "required": [
+                    "original",
+                    "pinyin_full",
+                    "words",
+                    "grammar_points",
+                    "translation_ko",
+                    "translation_literal_ko",
+                    "difficulty_note",
+                    "role",
+                ],
+                "additionalProperties": False,
+            },
         }
     },
     "required": ["sentences"],
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
 SYSTEM_PROMPT = """당신은 한국인 학습자를 위한 중국어 전문 교사입니다.
@@ -122,9 +136,13 @@ class Analyzer:
         self.client = client
         self.cache = cache
 
-    def analyze_track(self, track_name: str, transcription: str,
-                      progress_callback: Optional[Callable] = None,
-                      force: bool = False) -> List[SentenceAnalysis]:
+    def analyze_track(
+        self,
+        track_name: str,
+        transcription: str,
+        progress_callback: Callable | None = None,
+        force: bool = False,
+    ) -> list[SentenceAnalysis]:
         """트랙 전체 문장 분석"""
         # 캐시 확인
         if not force:
@@ -134,7 +152,7 @@ class Analyzer:
 
         # 구두점 교정 (FunASR ct-punc가 쉼표만 쓰는 경우)
         if progress_callback:
-            progress_callback(f"  구두점 교정 중...")
+            progress_callback("  구두점 교정 중...")
         fixed = self._fix_punctuation(transcription)
         if fixed != transcription:
             self.cache.save_transcription(track_name, fixed)
@@ -150,7 +168,7 @@ class Analyzer:
         total_batches = math.ceil(len(sentences) / ANALYSIS_BATCH_SIZE)
 
         for batch_idx in range(0, len(sentences), ANALYSIS_BATCH_SIZE):
-            batch = sentences[batch_idx:batch_idx + ANALYSIS_BATCH_SIZE]
+            batch = sentences[batch_idx : batch_idx + ANALYSIS_BATCH_SIZE]
             batch_num = batch_idx // ANALYSIS_BATCH_SIZE + 1
 
             if progress_callback:
@@ -170,8 +188,8 @@ class Analyzer:
     def _fix_punctuation(self, text: str) -> str:
         """GPT로 문장 종결 부호 교정 (，→。？！)"""
         # 이미 종결 부호가 충분하면 스킵
-        endings = len(re.findall(r'[。！？!?]', text))
-        chars = len(re.sub(r'\s', '', text))
+        endings = len(re.findall(r"[。！？!?]", text))
+        chars = len(re.sub(r"\s", "", text))
         if chars < 10 or (endings >= 2 and endings >= chars / 30):
             return text
 
@@ -181,15 +199,18 @@ class Analyzer:
                 response = self.client.chat.completions.create(
                     model=GPT_MODEL,
                     messages=[
-                        {"role": "system", "content": (
-                            "중국어 텍스트의 문장 부호만 교정하세요.\n"
-                            "규칙:\n"
-                            "1. 쉼표(，) 중 문장이 끝나는 곳을 종결 부호로 바꾸세요: 서술문→。 의문문→？ 감탄문→！\n"
-                            "2. 문장 중간의 쉼표(，)는 유지하세요.\n"
-                            "3. 글자는 절대 추가/삭제/변경하지 마세요. 구두점만 교정하세요.\n"
-                            "4. 교정된 텍스트만 출력하세요. 설명 없이."
-                        )},
-                        {"role": "user", "content": text}
+                        {
+                            "role": "system",
+                            "content": (
+                                "중국어 텍스트의 문장 부호만 교정하세요.\n"
+                                "규칙:\n"
+                                "1. 쉼표(，) 중 문장이 끝나는 곳을 종결 부호로 바꾸세요: 서술문→。 의문문→？ 감탄문→！\n"
+                                "2. 문장 중간의 쉼표(，)는 유지하세요.\n"
+                                "3. 글자는 절대 추가/삭제/변경하지 마세요. 구두점만 교정하세요.\n"
+                                "4. 교정된 텍스트만 출력하세요. 설명 없이."
+                            ),
+                        },
+                        {"role": "user", "content": text},
                     ],
                     temperature=1,
                     timeout=60,
@@ -197,43 +218,43 @@ class Analyzer:
                 result = response.choices[0].message.content.strip()
 
                 # 검증: 한자 내용이 동일한지 확인
-                orig_chars = re.sub(r'[，。！？!?,.\s、；;：:]', '', text)
-                result_chars = re.sub(r'[，。！？!?,.\s、；;：:]', '', result)
+                orig_chars = re.sub(r"[，。！？!?,.\s、；;：:]", "", text)
+                result_chars = re.sub(r"[，。！？!?,.\s、；;：:]", "", result)
                 if orig_chars != result_chars:
                     return text  # GPT가 내용을 변경했으면 원본 유지
 
                 return result
-            except Exception as e:
+            except Exception:
                 if attempt < max_retries:
                     time.sleep(attempt * 3)
                 else:
                     return text  # 실패 시 원본 유지
 
-    def _split_sentences(self, text: str) -> List[str]:
+    def _split_sentences(self, text: str) -> list[str]:
         """중국어 문장 부호 기준으로 분리 (영문/중문 구두점 모두 처리)"""
         # 중국어 + 영문 문장 종결 부호 모두 처리
-        sentences = re.split(r'(?<=[。！？!?])\s*', text)
+        sentences = re.split(r"(?<=[。！？!?])\s*", text)
         sentences = [s.strip() for s in sentences if s.strip()]
 
         # HSK 시험 구조 마커 패턴 (제거 대상)
         marker_pattern = re.compile(
-            r'^('
-            r'第[一二三四五六七八九十\d]+部分[,.，。\s]*'  # 第一部分, 第2部分
-            r'|第[一二三四五六七八九十\d]+[题題][,.，。\s]*'  # 第一题, 第3题
-            r'|第[一二三四五六七八九十\d]+到第[一二三四五六七八九十\d]+[题題][,.，。\s]*'  # 第1到第5题
-            r'|第[一二三四五六七八九十\d]+段[,.，。\s]*'  # 第一段
-            r'|[一二三四五六七八九十]+[、.,\s]+'  # 一、 二、
-            r'|\d+[、.,\s]+'  # 1、 2.
-            r'|听力[,.，。\s]*'  # 听力
-            r'|阅读[,.，。\s]*'  # 阅读
-            r'|书写[,.，。\s]*'  # 书写
-            r')*'
+            r"^("
+            r"第[一二三四五六七八九十\d]+部分[,.，。\s]*"  # 第一部分, 第2部分
+            r"|第[一二三四五六七八九十\d]+[题題][,.，。\s]*"  # 第一题, 第3题
+            r"|第[一二三四五六七八九十\d]+到第[一二三四五六七八九十\d]+[题題][,.，。\s]*"  # 第1到第5题
+            r"|第[一二三四五六七八九十\d]+段[,.，。\s]*"  # 第一段
+            r"|[一二三四五六七八九十]+[、.,\s]+"  # 一、 二、
+            r"|\d+[、.,\s]+"  # 1、 2.
+            r"|听力[,.，。\s]*"  # 听力
+            r"|阅读[,.，。\s]*"  # 阅读
+            r"|书写[,.，。\s]*"  # 书写
+            r")*"
         )
 
         result = []
         for s in sentences:
             # 마커 제거
-            cleaned = marker_pattern.sub('', s).strip()
+            cleaned = marker_pattern.sub("", s).strip()
             if len(cleaned) <= 1:
                 continue
             # 중복 문장 제거 (Whisper가 반복 인식하는 경우)
@@ -242,8 +263,7 @@ class Analyzer:
             result.append(cleaned)
         return result
 
-    def _analyze_batch(self, sentences: List[str],
-                       start_index: int) -> List[SentenceAnalysis]:
+    def _analyze_batch(self, sentences: list[str], start_index: int) -> list[SentenceAnalysis]:
         """문장 배치를 GPT API로 분석"""
         user_content = "다음 중국어 문장들을 분석해 주세요:\n\n"
         for i, s in enumerate(sentences):
@@ -256,15 +276,15 @@ class Analyzer:
                     model=GPT_MODEL,
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": user_content}
+                        {"role": "user", "content": user_content},
                     ],
                     response_format={
                         "type": "json_schema",
                         "json_schema": {
                             "name": "sentence_analysis",
                             "strict": True,
-                            "schema": ANALYSIS_SCHEMA
-                        }
+                            "schema": ANALYSIS_SCHEMA,
+                        },
                     },
                     temperature=1,
                     timeout=300,
@@ -277,7 +297,7 @@ class Analyzer:
                     print(f"    {wait}초 후 재시도...")
                     time.sleep(wait)
                 else:
-                    raise RuntimeError(f"API 호출 {max_retries}회 실패: {e}")
+                    raise RuntimeError(f"API 호출 {max_retries}회 실패: {e}") from e
 
         result = json.loads(response.choices[0].message.content)
 
@@ -296,21 +316,30 @@ class Analyzer:
             )
             analyses.append(analysis)
 
+        # GPT 출력 검증 + 자동 교정
+        vresult = validate_batch(analyses)
+        if vresult["total_corrections"] > 0:
+            print(f"    ✓ 자동 교정 {vresult['total_corrections']}건")
+        if vresult["total_warnings"] > 0:
+            print(f"    ⚠ 경고 {vresult['total_warnings']}건")
+
         return analyses
 
-    def _dicts_to_analyses(self, dicts: List[dict]) -> List[SentenceAnalysis]:
+    def _dicts_to_analyses(self, dicts: list[dict]) -> list[SentenceAnalysis]:
         """캐시된 dict 리스트를 SentenceAnalysis 객체로 변환"""
         analyses = []
         for d in dicts:
-            analyses.append(SentenceAnalysis(
-                sentence_index=d["sentence_index"],
-                original=d["original"],
-                pinyin_full=d["pinyin_full"],
-                words=[WordBreakdown(**w) for w in d["words"]],
-                grammar_points=[GrammarPoint(**g) for g in d["grammar_points"]],
-                translation_ko=d["translation_ko"],
-                translation_literal_ko=d["translation_literal_ko"],
-                difficulty_note=d["difficulty_note"],
-                role=d.get("role", ""),
-            ))
+            analyses.append(
+                SentenceAnalysis(
+                    sentence_index=d["sentence_index"],
+                    original=d["original"],
+                    pinyin_full=d["pinyin_full"],
+                    words=[WordBreakdown(**w) for w in d["words"]],
+                    grammar_points=[GrammarPoint(**g) for g in d["grammar_points"]],
+                    translation_ko=d["translation_ko"],
+                    translation_literal_ko=d["translation_literal_ko"],
+                    difficulty_note=d["difficulty_note"],
+                    role=d.get("role", ""),
+                )
+            )
         return analyses

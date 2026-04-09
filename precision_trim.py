@@ -12,21 +12,25 @@ import io
 import json
 import re
 import sys
-from pathlib import Path
 from difflib import SequenceMatcher
 
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
+    sys.stderr = io.TextIOWrapper(
+        sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
 
 from pydub import AudioSegment
+
 from config import OUTPUT_DIR, TRANSCRIPTION_CACHE
 
 SPLIT_AUDIO_DIR = OUTPUT_DIR / "audio_splits"
 
 
 def strip_punc(text):
-    return re.sub(r'[，。！？、；：""''（）《》【】\s,.!?;:\s]', '', text)
+    return re.sub(r'[，。！？、；：""' r"（）《》【】\s,.!?;:\s]", "", text)
 
 
 def get_question_text(track_name, q_num):
@@ -56,7 +60,7 @@ def find_trim_points(original_text, recognized_text, timestamps):
         return 0, None
 
     # 구두점 제거된 인식 텍스트의 문자별 타임스탬프 매핑
-    punc_pattern = re.compile(r'[，。！？、；：""''（）《》【】\s,.!?;:\s]')
+    punc_pattern = re.compile(r'[，。！？、；：""' r"（）《》【】\s,.!?;:\s]")
     recog_raw = []
     raw_to_ts = []
     ts_idx = 0
@@ -67,12 +71,12 @@ def find_trim_points(original_text, recognized_text, timestamps):
         if ts_idx < len(timestamps):
             raw_to_ts.append(ts_idx)
         ts_idx += 1
-    recog_raw_str = ''.join(recog_raw)
+    recog_raw_str = "".join(recog_raw)
 
     # 원본 텍스트의 시작 부분을 인식 텍스트에서 찾기
     # (앞에 붙은 잔여분 감지)
     trim_start_ms = 0
-    orig_start_key = orig_clean[:min(10, len(orig_clean))]
+    orig_start_key = orig_clean[: min(10, len(orig_clean))]
     start_pos = recog_raw_str.find(orig_start_key)
 
     if start_pos > 0:
@@ -80,23 +84,27 @@ def find_trim_points(original_text, recognized_text, timestamps):
         if start_pos < len(raw_to_ts) and raw_to_ts[start_pos] < len(timestamps):
             # 원본 시작 지점에서 약간 앞(300ms)부터
             trim_start_ms = max(0, timestamps[raw_to_ts[start_pos]][0] - 300)
-            print(f"    앞 트리밍: {start_pos}자 제거 "
-                  f"(\"{recog_raw_str[:start_pos]}\" → {trim_start_ms/1000:.1f}s)")
+            print(
+                f"    앞 트리밍: {start_pos}자 제거 "
+                f'("{recog_raw_str[:start_pos]}" → {trim_start_ms / 1000:.1f}s)'
+            )
     elif start_pos < 0:
         # 못 찾으면 더 짧은 키로 재시도
         for klen in [7, 5, 3]:
-            key = orig_clean[:min(klen, len(orig_clean))]
+            key = orig_clean[: min(klen, len(orig_clean))]
             start_pos = recog_raw_str.find(key)
             if start_pos > 0:
                 if start_pos < len(raw_to_ts) and raw_to_ts[start_pos] < len(timestamps):
                     trim_start_ms = max(0, timestamps[raw_to_ts[start_pos]][0] - 300)
-                    print(f"    앞 트리밍: {start_pos}자 제거 (짧은키 매칭, {trim_start_ms/1000:.1f}s)")
+                    print(
+                        f"    앞 트리밍: {start_pos}자 제거 (짧은키 매칭, {trim_start_ms / 1000:.1f}s)"
+                    )
                 break
 
     # 원본 텍스트의 끝 부분을 인식 텍스트에서 찾기
     # (뒤에 붙은 다음 문제 시작분 감지)
     trim_end_ms = None
-    orig_end_key = orig_clean[-min(10, len(orig_clean)):]
+    orig_end_key = orig_clean[-min(10, len(orig_clean)) :]
     end_pos = recog_raw_str.rfind(orig_end_key)
 
     if end_pos >= 0:
@@ -107,17 +115,16 @@ def find_trim_points(original_text, recognized_text, timestamps):
             if end_char_pos < len(raw_to_ts) and raw_to_ts[end_char_pos] < len(timestamps):
                 # 원본 끝나는 지점에서 약간 뒤(500ms)까지
                 ts_idx_at_end = raw_to_ts[min(end_char_pos, len(raw_to_ts) - 1)]
-                trim_end_ms = min(
-                    timestamps[ts_idx_at_end][1] + 500,
-                    timestamps[-1][1]
-                )
+                trim_end_ms = min(timestamps[ts_idx_at_end][1] + 500, timestamps[-1][1])
                 extra_text = recog_raw_str[end_char_pos:]
-                print(f"    뒤 트리밍: {extra_chars}자 제거 "
-                      f"(\"{extra_text[:20]}\" → {trim_end_ms/1000:.1f}s)")
+                print(
+                    f"    뒤 트리밍: {extra_chars}자 제거 "
+                    f'("{extra_text[:20]}" → {trim_end_ms / 1000:.1f}s)'
+                )
     else:
         # 못 찾으면 더 짧은 키로 재시도
         for klen in [7, 5, 3]:
-            key = orig_clean[-min(klen, len(orig_clean)):]
+            key = orig_clean[-min(klen, len(orig_clean)) :]
             end_pos = recog_raw_str.rfind(key)
             if end_pos >= 0:
                 end_char_pos = end_pos + len(key)
@@ -125,11 +132,10 @@ def find_trim_points(original_text, recognized_text, timestamps):
                 if extra_chars > 2:
                     if end_char_pos < len(raw_to_ts) and raw_to_ts[end_char_pos] < len(timestamps):
                         ts_idx_at_end = raw_to_ts[min(end_char_pos, len(raw_to_ts) - 1)]
-                        trim_end_ms = min(
-                            timestamps[ts_idx_at_end][1] + 500,
-                            timestamps[-1][1]
+                        trim_end_ms = min(timestamps[ts_idx_at_end][1] + 500, timestamps[-1][1])
+                        print(
+                            f"    뒤 트리밍: {extra_chars}자 제거 (짧은키, {trim_end_ms / 1000:.1f}s)"
                         )
-                        print(f"    뒤 트리밍: {extra_chars}자 제거 (짧은키, {trim_end_ms/1000:.1f}s)")
                 break
 
     return trim_start_ms, trim_end_ms
@@ -167,7 +173,7 @@ def trim_file(mp3_path, track_name, q_num, model):
     trim_start_ms, trim_end_ms = find_trim_points(original, recognized, timestamps)
 
     if trim_start_ms == 0 and trim_end_ms is None:
-        print(f"    트리밍 포인트를 찾지 못함")
+        print("    트리밍 포인트를 찾지 못함")
         return False, "no_trim_points"
 
     # 오디오 트리밍
@@ -188,8 +194,10 @@ def trim_file(mp3_path, track_name, q_num, model):
 
     old_dur = total_ms / 1000
     new_dur = len(trimmed) / 1000
-    print(f"    트리밍 완료: {old_dur:.1f}s → {new_dur:.1f}s "
-          f"(앞 {new_start/1000:.1f}s, 뒤 {(total_ms-new_end)/1000:.1f}s 제거)")
+    print(
+        f"    트리밍 완료: {old_dur:.1f}s → {new_dur:.1f}s "
+        f"(앞 {new_start / 1000:.1f}s, 뒤 {(total_ms - new_end) / 1000:.1f}s 제거)"
+    )
 
     return True, "trimmed"
 
@@ -202,14 +210,14 @@ def main():
     split_files = sorted(SPLIT_AUDIO_DIR.glob("TRACK*-[0-9][0-9].mp3"))
 
     if target_tracks:
-        split_files = [f for f in split_files
-                       if any(f.stem.startswith(t) for t in target_tracks)]
+        split_files = [f for f in split_files if any(f.stem.startswith(t) for t in target_tracks)]
 
     print(f"정밀 트리밍 대상: {len(split_files)}개 파일\n")
 
     # FunASR 모델 로드
     print("FunASR 모델 로딩 중...")
     from funasr import AutoModel
+
     model = AutoModel(
         model="paraformer-zh",
         vad_model="fsmn-vad",
@@ -223,7 +231,7 @@ def main():
 
     for mp3_path in split_files:
         stem = mp3_path.stem
-        match = re.match(r'(TRACK\d+)-(\d+)$', stem)
+        match = re.match(r"(TRACK\d+)-(\d+)$", stem)
         if not match:
             continue
 
@@ -238,8 +246,8 @@ def main():
         else:
             results["failed"] += 1
 
-    print(f"\n{'='*60}")
-    print(f"정밀 트리밍 완료:")
+    print(f"\n{'=' * 60}")
+    print("정밀 트리밍 완료:")
     print(f"  트리밍 적용: {results['trimmed']}개")
     print(f"  이미 OK: {results['already_ok']}개")
     print(f"  실패: {results['failed']}개")

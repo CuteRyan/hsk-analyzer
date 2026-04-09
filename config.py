@@ -1,6 +1,5 @@
 """config.py - 설정값 관리"""
 
-import os
 from pathlib import Path
 
 # 프로젝트 디렉토리
@@ -9,7 +8,9 @@ PROJECT_DIR = Path(__file__).parent
 # MP3 소스 디렉토리
 MP3_SOURCES = {
     "listening": Path(r"c:/Users/rlgns/OneDrive/문서/HSK/신HSK_한권으로_합격하기5급_개정판/MP3"),
-    "vocabulary": Path(r"c:/Users/rlgns/OneDrive/문서/HSK/신HSK_한권으로_합격하기5급_개정판/단어MP3"),
+    "vocabulary": Path(
+        r"c:/Users/rlgns/OneDrive/문서/HSK/신HSK_한권으로_합격하기5급_개정판/단어MP3"
+    ),
 }
 
 # 소스별 한글 이름

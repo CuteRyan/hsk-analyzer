@@ -11,26 +11,44 @@ import io
 import json
 import re
 import sys
-from pathlib import Path
 
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+    )
 
 from config import TRANSCRIPTION_CACHE
 
 # 중국어 숫자 → 정수
-_CN = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
-       '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
-       '十一': 11, '十二': 12, '十三': 13, '十四': 14, '十五': 15,
-       '二十': 20, '三十': 30, '四十': 40, '四十五': 45}
+_CN = {
+    "一": 1,
+    "二": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+    "十": 10,
+    "十一": 11,
+    "十二": 12,
+    "十三": 13,
+    "十四": 14,
+    "十五": 15,
+    "二十": 20,
+    "三十": 30,
+    "四十": 40,
+    "四十五": 45,
+}
 
 
 def cn_to_int(s):
     if s in _CN:
         return _CN[s]
     # 조합: 三十一 → 31
-    if '十' in s:
-        parts = s.split('十')
+    if "十" in s:
+        parts = s.split("十")
         tens = _CN.get(parts[0], 0) if parts[0] else 1
         ones = _CN.get(parts[1], 0) if len(parts) > 1 and parts[1] else 0
         return tens * 10 + ones
@@ -42,7 +60,7 @@ def detect_shared_groups(questions):
     반환: {start_qnum: [qnum1, qnum2, ...]} 매핑
     """
     groups = {}
-    pattern = re.compile(r'第(.+?)到(.+?)题')
+    pattern = re.compile(r"第(.+?)到(.+?)题")
 
     for q in questions:
         for s in q.get("sentences", []):
@@ -85,11 +103,13 @@ def merge_questions(questions, groups):
                     sub_questions.append(mnum)
                     processed.add(mnum)
 
-            merged.append({
-                "question_num": qnum,
-                "sub_questions": sub_questions,
-                "sentences": all_sentences,
-            })
+            merged.append(
+                {
+                    "question_num": qnum,
+                    "sub_questions": sub_questions,
+                    "sentences": all_sentences,
+                }
+            )
         elif qnum in member_to_leader:
             # 이미 리더에서 처리됨, 스킵
             continue

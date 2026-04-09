@@ -4,12 +4,8 @@
                     <span class="role-badge role-{{ s.role }}">{{ s.role }}</span>
                     {% endif %}
 
-                    <!-- 루비 병음 -->
-                    <div class="chinese-text">
-                        {%- for w in s.words -%}
-                        <ruby>{{ w.word }}<rt>{{ w.pinyin }}</rt></ruby>
-                        {%- endfor -%}
-                    </div>
+                    <!-- 루비 병음 (original 기준 매칭) -->
+                    <div class="chinese-text">{{ build_ruby(s.original, s.words) }}</div>
 
                     <!-- 전체 병음 -->
                     <div class="pinyin-line">{{ s.pinyin_full }}</div>

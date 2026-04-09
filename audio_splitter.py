@@ -5,7 +5,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple, Optional
 
 from pydub import AudioSegment
 
@@ -16,11 +15,31 @@ SPLIT_AUDIO_DIR = OUTPUT_DIR / "audio_splits"
 
 # 한자 숫자 → 정수 변환
 CN_NUM_MAP = {
-    "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
-    "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
-    "十一": 11, "十二": 12, "十三": 13, "十四": 14, "十五": 15,
-    "十六": 16, "十七": 17, "十八": 18, "十九": 19, "二十": 20,
-    "二十一": 21, "二十二": 22, "二十三": 23, "二十四": 24, "二十五": 25,
+    "一": 1,
+    "二": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+    "十": 10,
+    "十一": 11,
+    "十二": 12,
+    "十三": 13,
+    "十四": 14,
+    "十五": 15,
+    "十六": 16,
+    "十七": 17,
+    "十八": 18,
+    "十九": 19,
+    "二十": 20,
+    "二十一": 21,
+    "二十二": 22,
+    "二十三": 23,
+    "二十四": 24,
+    "二十五": 25,
 }
 
 
@@ -32,7 +51,7 @@ def _cn_to_int(cn: str) -> int:
 
 def _strip_punc(text: str):
     """구두점 제거 → (raw_chars, raw_to_orig) 반환"""
-    punc_pattern = re.compile(r'[，。！？、；：""''（）《》【】\s]')
+    punc_pattern = re.compile(r'[，。！？、；：""' r"（）《》【】\s]")
     raw_chars = []
     raw_to_orig = []
     for i, ch in enumerate(text):
@@ -44,7 +63,7 @@ def _strip_punc(text: str):
 
 def find_question_markers_with_timestamps(
     text: str, timestamps: list
-) -> List[Tuple[int, int, int]]:
+) -> list[tuple[int, int, int]]:
     """FunASR 타임스탬프를 이용하여 문제 마커 위치(번호, 시작ms, 원본텍스트위치)를 찾음.
 
     text: 구두점 포함 텍스트
@@ -106,12 +125,13 @@ def find_question_markers_with_timestamps(
         elif i > 0:
             orig_idx = raw_to_orig[i]
             before = text[:orig_idx].rstrip()
-            if before and before[-1] in "。？！?!，,":
-                is_marker = True
-            elif before.endswith("第"):
-                is_marker = True
-            # 시간 갭 기반: 이전 문자와 3초 이상 갭이 있으면 마커로 판정
-            elif i > 0 and timestamps[i][0] - timestamps[i - 1][1] > 3000:
+            if (
+                before
+                and before[-1] in "。？！?!，,"
+                or before.endswith("第")
+                or i > 0
+                and timestamps[i][0] - timestamps[i - 1][1] > 3000
+            ):
                 is_marker = True
 
         if not is_marker:
@@ -127,7 +147,7 @@ def find_question_markers_with_timestamps(
 
     result = []
     seen_nums = set()
-    for num, ts_ms, raw_idx, orig_idx in candidates:
+    for num, ts_ms, _raw_idx, orig_idx in candidates:
         if num not in seen_nums:
             if num == 1 or (num - 1) in seen_nums:
                 result.append((num, ts_ms, orig_idx))
@@ -137,8 +157,7 @@ def find_question_markers_with_timestamps(
     return result
 
 
-def split_track_text(track_name: str, text: str,
-                     markers: List[Tuple[int, int, int]]) -> List[dict]:
+def split_track_text(track_name: str, text: str, markers: list[tuple[int, int, int]]) -> list[dict]:
     """텍스트를 문제별로 분할.
 
     markers: [(question_num, start_ms, orig_text_index), ...]
@@ -155,17 +174,20 @@ def split_track_text(track_name: str, text: str,
         else:
             end_pos = len(text)
         q_text = text[orig_pos:end_pos].strip()
-        results.append({
-            "question_num": q_num,
-            "text": q_text,
-            "start_ms": start_ms,
-        })
+        results.append(
+            {
+                "question_num": q_num,
+                "text": q_text,
+                "start_ms": start_ms,
+            }
+        )
 
     return results
 
 
-def split_track_audio(mp3_path: Path, markers: List[Tuple[int, int, int]],
-                      track_name: str, padding_ms: int = 500) -> List[Path]:
+def split_track_audio(
+    mp3_path: Path, markers: list[tuple[int, int, int]], track_name: str, padding_ms: int = 500
+) -> list[Path]:
     """MP3를 문제별로 분할하여 저장.
 
     markers: [(question_num, start_ms, orig_text_index), ...]
@@ -198,19 +220,19 @@ def split_track_audio(mp3_path: Path, markers: List[Tuple[int, int, int]],
         output_files.append(out_path)
 
         dur = len(segment) / 1000
-        print(f"    {out_name}: {dur:.1f}s "
-              f"({seg_start/1000:.1f}s ~ {seg_end/1000:.1f}s)")
+        print(f"    {out_name}: {dur:.1f}s ({seg_start / 1000:.1f}s ~ {seg_end / 1000:.1f}s)")
 
     return output_files
 
 
-def get_timestamps_for_track(mp3_path: Path, model=None) -> Tuple[str, list]:
+def get_timestamps_for_track(mp3_path: Path, model=None) -> tuple[str, list]:
     """FunASR로 타임스탬프 포함 음성인식 실행.
 
     반환: (text, timestamps)
     """
     if model is None:
         from funasr import AutoModel
+
         model = AutoModel(
             model="paraformer-zh",
             vad_model="fsmn-vad",
@@ -224,13 +246,13 @@ def get_timestamps_for_track(mp3_path: Path, model=None) -> Tuple[str, list]:
     return r.get("text", ""), r.get("timestamp", [])
 
 
-def split_all_long_tracks(source: str = "listening",
-                          min_chars: int = 200) -> dict:
+def split_all_long_tracks(source: str = "listening", min_chars: int = 200) -> dict:
     """긴 트랙(여러 문제)을 전부 분할.
 
     반환: {track_name: {"questions": [...], "audio_files": [...]}}
     """
     from funasr import AutoModel
+
     model = AutoModel(
         model="paraformer-zh",
         vad_model="fsmn-vad",
@@ -264,7 +286,7 @@ def split_all_long_tracks(source: str = "listening",
         # 문제 마커 찾기
         markers = find_question_markers_with_timestamps(text_ts, timestamps)
         if len(markers) <= 1:
-            print(f"  단일 문제 트랙 (분할 불필요)")
+            print("  단일 문제 트랙 (분할 불필요)")
             continue
 
         print(f"  {len(markers)}개 문제 감지: {[m[0] for m in markers]}")
@@ -286,13 +308,13 @@ def split_all_long_tracks(source: str = "listening",
 if __name__ == "__main__":
     if sys.platform == "win32":
         sys.stdout = io.TextIOWrapper(
-            sys.stdout.buffer, encoding="utf-8",
-            errors="replace", line_buffering=True
+            sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
         )
 
     print("=== FunASR 타임스탬프 기반 문제 분할 ===\n")
     results = split_all_long_tracks()
     print(f"\n=== 완료: {len(results)}개 트랙 분할 ===")
     for name, data in results.items():
-        print(f"  {name}: {len(data['questions'])}개 문제, "
-              f"{len(data['audio_files'])}개 오디오 파일")
+        print(
+            f"  {name}: {len(data['questions'])}개 문제, {len(data['audio_files'])}개 오디오 파일"
+        )

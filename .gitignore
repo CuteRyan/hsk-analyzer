@@ -21,3 +21,13 @@ Thumbs.db
 batch_log.txt
 batch_result.json
 tmp_analysis_output.json
+
+# Backups
+.backups/
+
+# Dev tools
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
