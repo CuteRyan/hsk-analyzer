@@ -282,9 +282,9 @@ class TestValidateBatch:
         valid_set = VALID_POS | {"기타"}
         for a in analyses:
             for w in a.words:
-                assert (
-                    w.part_of_speech in valid_set
-                ), f"'{w.part_of_speech}' not normalized for word '{w.word}'"
+                assert w.part_of_speech in valid_set, (
+                    f"'{w.part_of_speech}' not normalized for word '{w.word}'"
+                )
 
         # 모든 역할이 표준값이어야 함
         for a in analyses:
